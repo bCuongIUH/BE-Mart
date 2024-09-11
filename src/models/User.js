@@ -17,9 +17,25 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+
+  //them trường phân quyền
+  role: {
+    type: String,
+    enum: ['user', 'admin'],
+    default: 'user',
+  },
+  //thông tin người dùng
+  name: {
+    type: String,
+    required: true,
+  },
+  phoneNumber: {
+    type: String,
+    required: true,
+  },
 });
 
-// Mã hóa mật khẩu trước khi lưu
+// Hash password before saving
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
   

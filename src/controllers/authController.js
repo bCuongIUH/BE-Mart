@@ -28,26 +28,32 @@ exports.login = async (req, res) => {
   }
 };
 //đăng kí
+
 exports.register = async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, name, phoneNumber } = req.body;
 
   try {
+    // Check if the email already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(StatusCodes.BAD_REQUEST).json({ message: 'Email đã tồn tại' }); // Mã 400
+      return res.status(StatusCodes.BAD_REQUEST).json({ message: 'Email đã tồn tại' }); // 400 Bad Request
     }
 
+    // Generate OTP and set expiration time
     const otp = generateOTP();
-    const otpExpires = Date.now() + 10 * 60 * 1000; // OTP hết hạn sau 10 phút
+    const otpExpires = Date.now() + 10 * 60 * 1000; // OTP expires after 10 minutes
 
-    const user = new User({ email, password, otp, otpExpires });
+    // Create and save the new user
+    const user = new User({ email, password, name, phoneNumber, otp, otpExpires });
     await user.save();
 
+    // Send OTP to the user's email
     await sendEmail(email, 'Xác minh OTP', `Mã OTP của bạn là: ${otp}`);
     
-    return res.status(StatusCodes.CREATED).json({ message: 'Đã gửi OTP tới email của bạn' }); // Mã 201
+    return res.status(StatusCodes.CREATED).json({ message: 'Đã gửi OTP tới email của bạn' }); // 201 Created
   } catch (error) {
-    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Có lỗi xảy ra trong quá trình đăng ký' }); // Mã 500
+    console.error("Error during registration:", error);
+    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Có lỗi xảy ra trong quá trình đăng ký' }); // 500 Internal Server Error
   }
 };
 
