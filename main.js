@@ -2,8 +2,8 @@ const express = require('express');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const cors = require('cors'); 
-const authRoutes = require('./src/routes/authRoutes');
-
+const authRoutes = require('./src/user/routes/authRoutes');
+const cookieParser = require('cookie-parser');
 dotenv.config();
 
 const app = express();
@@ -12,6 +12,9 @@ app.use(cors({
   credentials: true // Để cho phép cookie và thông tin xác thực khác
 }));
 app.use(express.json());
+
+app.use(cookieParser()); // Sử dụng cookie-parser
+
 
 // Định tuyến cho xác thực
 app.use('/api/auth', authRoutes);

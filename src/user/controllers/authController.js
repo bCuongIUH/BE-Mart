@@ -3,6 +3,7 @@ const sendEmail = require('../utils/sendEmail');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const { StatusCodes } = require('http-status-codes');
+
 // Tạo mã OTP 6 số ngẫu nhiên
 const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -33,13 +34,11 @@ exports.register = async (req, res) => {
   const { email, password, name, phoneNumber } = req.body;
 
   try {
-    // Check if the email already exists
+ 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(StatusCodes.BAD_REQUEST).json({ message: 'Email đã tồn tại' }); // 400 Bad Request
     }
-
-    // Generate OTP and set expiration time
     const otp = generateOTP();
     const otpExpires = Date.now() + 10 * 60 * 1000; // OTP expires after 10 minutes
 
@@ -80,5 +79,46 @@ exports.verifyOTP = async (req, res) => {
     return res.status(StatusCodes.OK).json({ token, message: 'Xác minh thành công' }); // Mã 200
   } catch (error) {
     return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Có lỗi xảy ra trong quá trình xác minh OTP' }); // Mã 500
+  }
+};
+
+// Remove Cookie
+exports.removeCookie = (req, res) => {
+  try {
+    if (req.cookies.Session_JS) {
+      res.clearCookie('Session_JS');
+      res.status(StatusCodes.OK).send('Cookie removed');
+    } else {
+      res.status(StatusCodes.NOT_FOUND).send('Cookie not found');
+    }
+  } catch (error) {
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).send('An error occurred');
+  }
+};
+
+// Remove Token
+exports.removeToken = (req, res) => {
+  try {
+    if (req.cookies.token) {
+      res.clearCookie('token');
+      res.status(StatusCodes.OK).send('Token removed');
+    } else {
+      res.status(StatusCodes.NOT_FOUND).send('Token not found');
+    }
+  } catch (error) {
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).send('An error occurred');
+  }
+};
+
+// Get Token Status
+exports.getToken = (req, res) => {
+  try {
+    if (req.cookies.token) {
+      res.status(StatusCodes.OK).send('Token exists');
+    } else {
+      res.status(StatusCodes.NOT_FOUND).send('Token not found');
+    }
+  } catch (error) {
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).send('An error occurred');
   }
 };
