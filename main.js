@@ -9,11 +9,11 @@ dotenv.config();
 const app = express();
 app.use(cors({
   origin: 'http://localhost:3000', // Địa chỉ frontend của bạn
-  credentials: true // Để cho phép cookie và thông tin xác thực khác
+  credentials: true 
 }));
 app.use(express.json());
 
-app.use(cookieParser()); // Sử dụng cookie-parser
+app.use(cookieParser()); 
 
 
 // Định tuyến cho xác thực
