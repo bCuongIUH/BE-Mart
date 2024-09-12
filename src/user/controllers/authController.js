@@ -8,26 +8,6 @@ const { StatusCodes } = require('http-status-codes');
 const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
-// Đăng nhập người dùng
-// exports.login = async (req, res) => {
-//   const { email, password } = req.body;
-
-//   try {
-//     const user = await User.findOne({ email });
-//     if (!user) return res.status(StatusCodes.BAD_REQUEST).json({ message: 'Người dùng không tồn tại' });
-
-//     const isMatch = await bcrypt.compare(password, user.password);
-//     if (!isMatch) return res.status(StatusCodes.BAD_REQUEST).json({ message: 'Mật khẩu không chính xác' });
-
-//     if (!user.isVerified) return res.status(StatusCodes.BAD_REQUEST).json({ message: 'Tài khoản chưa được xác minh' });
-
-//     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-//     return res.status(StatusCodes.OK).json({ token, message: 'Đăng nhập thành công' });
-//   } catch (error) {
-//     console.error('Lỗi đăng nhập:', error);
-//     return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Có lỗi xảy ra' });
-//   }
-// };
 exports.login = async (req, res) => {
   const { email, password } = req.body;
 
@@ -50,6 +30,7 @@ exports.login = async (req, res) => {
         email: user.email,
         name: user.name,
         role: user.role,  
+        sdt: user.phoneNumber
       },
       message: 'Đăng nhập thành công'
     });
