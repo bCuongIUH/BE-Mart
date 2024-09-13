@@ -134,3 +134,81 @@ exports.getToken = (req, res) => {
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).send('An error occurred');
   }
 };
+// mât khẩu
+exports.forgotPassword = async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    const user = await User.findOne({ email });
+    if (!user) return res.status(StatusCodes.NOT_FOUND).json({ message: 'Người dùng không tồn tại' });
+
+    const otp = generateOTP();
+    const otpExpires = Date.now() + 10 * 60 * 1000; // OTP expires after 10 minutes
+
+    user.otp = otp;
+    user.otpExpires = otpExpires;
+    await user.save();
+
+    // Gửi OTP đến email người dùng
+    await sendEmail(email, 'Xác minh OTP', `Mã OTP của bạn là: ${otp}`);
+
+    return res.status(StatusCodes.OK).json({ message: 'Đã gửi OTP tới email của bạn' });
+  } catch (error) {
+    console.error('Lỗi trong quá trình quên mật khẩu:', error);
+    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Có lỗi xảy ra trong quá trình quên mật khẩu' });
+  }
+};
+
+// Xác minh OTP để đặt lại mật khẩu
+exports.verifyForgotPasswordOTP = async (req, res) => {
+  const { email, otp } = req.body;
+
+  try {
+    const user = await User.findOne({ email });
+    if (!user) return res.status(StatusCodes.NOT_FOUND).json({ message: 'Người dùng không tồn tại' });
+
+    if (user.otp !== otp || user.otpExpires < Date.now()) {
+      return res.status(StatusCodes.BAD_REQUEST).json({ message: 'OTP không hợp lệ hoặc đã hết hạn' });
+    }
+
+    // Tạo một token để đặt lại mật khẩu
+    const resetToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '15m' });
+    return res.status(StatusCodes.OK).json({ resetToken, message: 'OTP xác minh thành công' });
+  } catch (error) {
+    console.error('Lỗi trong quá trình xác minh OTP:', error);
+    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Có lỗi xảy ra trong quá trình xác minh OTP' });
+  }
+};
+
+// dổi mật khẩu
+exports.changePassword = async (req, res) => {
+  const { userId, oldPassword, newPassword } = req.body;
+
+  try {
+    // Kiểm tra xem userId có được cung cấp không
+    if (!userId) {
+      return res.status(StatusCodes.BAD_REQUEST).json({ message: 'Thiếu userId trong yêu cầu' });
+    }
+
+    // Tìm người dùng theo ID
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(StatusCodes.NOT_FOUND).json({ message: 'Người dùng không tồn tại' });
+    }
+
+    // Kiểm tra mật khẩu cũ
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!isMatch) {
+      return res.status(StatusCodes.BAD_REQUEST).json({ message: 'Mật khẩu cũ không chính xác' });
+    }
+
+    // Cập nhật mật khẩu mới
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
+
+    res.status(StatusCodes.OK).json({ message: 'Mật khẩu đã được thay đổi thành công' });
+  } catch (error) {
+    console.error('Lỗi đổi mật khẩu:', error);
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Có lỗi xảy ra' });
+  }
+};
