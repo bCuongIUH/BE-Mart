@@ -8,6 +8,8 @@ const { StatusCodes } = require('http-status-codes');
 const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
+
+
 exports.login = async (req, res) => {
   const { email, password } = req.body;
 
@@ -26,11 +28,11 @@ exports.login = async (req, res) => {
     return res.status(200).json({
       token,
       user: {
-        id: user._id,
+        _id: user._id,
         email: user.email,
-        name: user.name,
+        fullName: user.fullName,
         role: user.role,  
-        sdt: user.phoneNumber
+        phoneNumber: user.phoneNumber
       },
       message: 'Đăng nhập thành công'
     });
@@ -43,7 +45,7 @@ exports.login = async (req, res) => {
 //đăng kí
 
 exports.register = async (req, res) => {
-  const { email, password, name, phoneNumber } = req.body;
+  const { email, password, fullName, phoneNumber } = req.body;
 
   try {
  
@@ -52,10 +54,10 @@ exports.register = async (req, res) => {
       return res.status(StatusCodes.BAD_REQUEST).json({ message: 'Email đã tồn tại' }); // 400 Bad Request
     }
     const otp = generateOTP();
-    const otpExpires = Date.now() + 10 * 60 * 1000; // OTP expires after 10 minutes
+    const otpExpires = Date.now() + 10 * 60 * 1000; 
 
     // Create and save the new user
-    const user = new User({ email, password, name, phoneNumber, otp, otpExpires });
+    const user = new User({ email, password, fullName, phoneNumber, otp, otpExpires });
     await user.save();
 
     // Send OTP to the user's email

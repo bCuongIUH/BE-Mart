@@ -25,7 +25,7 @@ const userSchema = new mongoose.Schema({
     default: 'user',
   },
   //thông tin người dùng
-  name: {
+  fullName: {
     type: String,
     required: true,
   },
