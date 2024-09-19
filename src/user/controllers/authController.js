@@ -3,41 +3,54 @@ const sendEmail = require('../utils/sendEmail');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const { StatusCodes } = require('http-status-codes');
-
+// const bcrypt = require('bcryptjs')
 // Tạo mã OTP 6 số ngẫu nhiên
 const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
-
-
+// đăng nhập
 exports.login = async (req, res) => {
   const { email, password } = req.body;
 
   try {
     const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ message: 'Người dùng không tồn tại' });
+    if (!user) {
+      return res.status(400).json({ message: 'Người dùng không tồn tại' });
+    }
+
+    // In ra mật khẩu để kiểm tra
+    console.log("Mật khẩu nhập:", password);
+    console.log("Mật khẩu mã hóa:", user.password);
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).json({ message: 'Mật khẩu không chính xác' });
 
-    if (!user.isVerified) return res.status(400).json({ message: 'Tài khoản chưa được xác minh' });
+    // In ra kết quả so sánh
+    console.log("Kết quả so sánh:", isMatch);
+
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Mật khẩu không chính xác' });
+    }
+
+    if (!user.isVerified) {
+      return res.status(400).json({ message: 'Tài khoản chưa được xác minh' });
+    }
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
-    // Trả về thông tin người dùng cùng với token
     return res.status(200).json({
       token,
       user: {
         _id: user._id,
         email: user.email,
         fullName: user.fullName,
-        role: user.role,  
-        phoneNumber: user.phoneNumber
+        role: user.role,
+        phoneNumber: user.phoneNumber,
       },
       message: 'Đăng nhập thành công'
     });
+    
   } catch (error) {
-    console.error('Lỗi đăng nhập:', error);
+    console.error('Lỗi đăng nhập:', error.message);
     return res.status(500).json({ message: 'Có lỗi xảy ra' });
   }
 };
@@ -182,35 +195,58 @@ exports.verifyForgotPasswordOTP = async (req, res) => {
   }
 };
 
-// dổi mật khẩu
+
+
 exports.changePassword = async (req, res) => {
   const { userId, oldPassword, newPassword } = req.body;
 
   try {
-    // Kiểm tra xem userId có được cung cấp không
-    if (!userId) {
-      return res.status(StatusCodes.BAD_REQUEST).json({ message: 'Thiếu userId trong yêu cầu' });
-    }
-
-    // Tìm người dùng theo ID
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(StatusCodes.NOT_FOUND).json({ message: 'Người dùng không tồn tại' });
-    }
+    const user = await User.findById(userId); 
+    if (!user) return res.status(404).json({ message: 'Người dùng không tồn tại' });
 
     // Kiểm tra mật khẩu cũ
     const isMatch = await bcrypt.compare(oldPassword, user.password);
-    if (!isMatch) {
-      return res.status(StatusCodes.BAD_REQUEST).json({ message: 'Mật khẩu cũ không chính xác' });
-    }
+    if (!isMatch) return res.status(400).json({ message: 'Mật khẩu cũ không chính xác' });
+
+    // Mã hóa mật khẩu mới
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
 
     // Cập nhật mật khẩu mới
-    user.password = await bcrypt.hash(newPassword, 10);
-    await user.save();
+    user.password = hashedPassword;
+    await user.save(); // Lưu thay đổi vào DB
 
-    res.status(StatusCodes.OK).json({ message: 'Mật khẩu đã được thay đổi thành công' });
+    res.status(200).json({ message: 'Đổi mật khẩu thành công' });
   } catch (error) {
-    console.error('Lỗi đổi mật khẩu:', error);
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Có lỗi xảy ra' });
+    console.error('Lỗi khi đổi mật khẩu:', error);
+    res.status(500).json({ message: 'Có lỗi xảy ra trong quá trình đổi mật khẩu' });
+  }
+};
+// lấy user trong database
+exports.getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find({}); // Lấy tất cả người dùng từ DB
+    res.status(200).json({ users }); // Trả về dữ liệu dưới dạng { users: [...] }
+  } catch (error) {
+    console.error('Lỗi khi lấy tất cả người dùng:', error);
+    res.status(500).json({ message: 'Có lỗi xảy ra khi lấy người dùng' });
+  }
+};
+// Cập nhật vai trò của người dùng
+exports.updateUserRole = async (req, res) => {
+  const { role } = req.body; // Lấy vai trò mới từ request body
+
+  try {
+    const user = await User.findById(req.params.id); // Tìm người dùng theo ID
+    if (!user) {
+      return res.status(404).json({ message: 'Người dùng không tồn tại' });
+    }
+
+    user.role = role; // Cập nhật vai trò
+    await user.save(); // Lưu thay đổi
+
+    res.status(200).json({ message: 'Cập nhật vai trò thành công', user });
+  } catch (error) {
+    console.error('Lỗi khi cập nhật vai trò:', error);
+    res.status(500).json({ message: 'Có lỗi xảy ra khi cập nhật vai trò' });
   }
 };
