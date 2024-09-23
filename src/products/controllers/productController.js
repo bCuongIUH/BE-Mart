@@ -1,27 +1,27 @@
+
 const Product = require('../models/product');
 
-// Tạo sản phẩm mới
-exports.createProduct = async (req, res) => {
+
+// Thêm sản phẩm mới
+exports.addProduct = async (req, res) => {
   try {
-    const { name, price, description, image, saleStartDate, saleEndDate } = req.body;
-    
+    const { name, description, image, lines } = req.body;
+
     const newProduct = new Product({
       name,
-      price,
       description,
       image,
-      saleStartDate,
-      saleEndDate
+      lines
     });
-    
+
     await newProduct.save();
-    res.status(201).json({ message: 'Sản phẩm đã được tạo thành công', product: newProduct });
+    res.status(201).json({ message: 'Sản phẩm đã được thêm thành công!', product: newProduct });
   } catch (error) {
-    res.status(500).json({ message: 'Lỗi khi tạo sản phẩm', error });
+    console.error(error); // Ghi log lỗi để xem chi tiết
+    res.status(500).json({ message: 'Lỗi khi thêm sản phẩm', error: error.message });
   }
 };
-
-// Lấy danh sách sản phẩm
+// Lấy tất cả sản phẩm
 exports.getAllProducts = async (req, res) => {
   try {
     const products = await Product.find();
@@ -47,10 +47,10 @@ exports.getProductById = async (req, res) => {
 // Cập nhật sản phẩm
 exports.updateProduct = async (req, res) => {
   try {
-    const { name, price, description, image, saleStartDate, saleEndDate } = req.body;
+    const { name, description, category, lines } = req.body;
     const updatedProduct = await Product.findByIdAndUpdate(
       req.params.id,
-      { name, price, description, image, saleStartDate, saleEndDate },
+      { name, description, category, lines },
       { new: true }
     );
     if (!updatedProduct) {
