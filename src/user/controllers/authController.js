@@ -64,7 +64,7 @@ exports.register = async (req, res) => {
  
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(StatusCodes.BAD_REQUEST).json({ message: 'Email đã tồn tại' }); // 400 Bad Request
+      return res.status(StatusCodes.BAD_REQUEST).json({ message: 'Email đã tồn tại' }); 
     }
     const otp = generateOTP();
     const otpExpires = Date.now() + 10 * 60 * 1000; 
@@ -76,10 +76,10 @@ exports.register = async (req, res) => {
     // Send OTP to the user's email
     await sendEmail(email, 'Xác minh OTP', `Mã OTP của bạn là: ${otp}`);
     
-    return res.status(StatusCodes.CREATED).json({ message: 'Đã gửi OTP tới email của bạn' }); // 201 Created
+    return res.status(StatusCodes.CREATED).json({ message: 'Đã gửi OTP tới email của bạn' }); 
   } catch (error) {
     console.error("Error during registration:", error);
-    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Có lỗi xảy ra trong quá trình đăng ký' }); // 500 Internal Server Error
+    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Có lỗi xảy ra trong quá trình đăng ký' }); 
   }
 };
 
@@ -90,11 +90,11 @@ exports.verifyOTP = async (req, res) => {
   try {
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(StatusCodes.NOT_FOUND).json({ message: 'Người dùng không tồn tại' }); // Mã 404
+      return res.status(StatusCodes.NOT_FOUND).json({ message: 'Người dùng không tồn tại' });
     }
 
     if (user.otp !== otp || user.otpExpires < Date.now()) {
-      return res.status(StatusCodes.BAD_REQUEST).json({ message: 'OTP không hợp lệ hoặc đã hết hạn' }); // Mã 400
+      return res.status(StatusCodes.BAD_REQUEST).json({ message: 'OTP không hợp lệ hoặc đã hết hạn' }); 
     }
 
     user.isVerified = true;
@@ -103,9 +103,9 @@ exports.verifyOTP = async (req, res) => {
     await user.save();
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-    return res.status(StatusCodes.OK).json({ token, message: 'Xác minh thành công' }); // Mã 200
+    return res.status(StatusCodes.OK).json({ token, message: 'Xác minh thành công' }); 
   } catch (error) {
-    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Có lỗi xảy ra trong quá trình xác minh OTP' }); // Mã 500
+    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Có lỗi xảy ra trong quá trình xác minh OTP' });
   }
 };
 
@@ -158,7 +158,7 @@ exports.forgotPassword = async (req, res) => {
     if (!user) return res.status(StatusCodes.NOT_FOUND).json({ message: 'Người dùng không tồn tại' });
 
     const otp = generateOTP();
-    const otpExpires = Date.now() + 10 * 60 * 1000; // OTP expires after 10 minutes
+    const otpExpires = Date.now() + 10 * 60 * 1000; // thời gian tồn lại otp 10p
 
     user.otp = otp;
     user.otpExpires = otpExpires;
@@ -213,7 +213,7 @@ exports.changePassword = async (req, res) => {
 
     // Cập nhật mật khẩu mới
     user.password = hashedPassword;
-    await user.save(); // Lưu thay đổi vào DB
+    await user.save();
 
     res.status(200).json({ message: 'Đổi mật khẩu thành công' });
   } catch (error) {
@@ -224,8 +224,8 @@ exports.changePassword = async (req, res) => {
 // lấy user trong database
 exports.getAllUsers = async (req, res) => {
   try {
-    const users = await User.find({}); // Lấy tất cả người dùng từ DB
-    res.status(200).json({ users }); // Trả về dữ liệu dưới dạng { users: [...] }
+    const users = await User.find({}); 
+    res.status(200).json({ users }); 
   } catch (error) {
     console.error('Lỗi khi lấy tất cả người dùng:', error);
     res.status(500).json({ message: 'Có lỗi xảy ra khi lấy người dùng' });
@@ -233,10 +233,10 @@ exports.getAllUsers = async (req, res) => {
 };
 // Cập nhật vai trò của người dùng
 exports.updateUserRole = async (req, res) => {
-  const { role } = req.body; // Lấy vai trò mới từ request body
+  const { role } = req.body;
 
   try {
-    const user = await User.findById(req.params.id); // Tìm người dùng theo ID
+    const user = await User.findById(req.params.id); 
     if (!user) {
       return res.status(404).json({ message: 'Người dùng không tồn tại' });
     }

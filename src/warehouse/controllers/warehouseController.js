@@ -2,6 +2,15 @@
 const Product = require('../../products/models/product');
 const Warehouse = require('../models/warehouse');
 
+// Lấy tất cả sp trong kho
+exports.getAllWarehouse = async (req, res) => {
+    try {
+      const warehouse = await Warehouse.find();
+      res.status(200).json(warehouse);
+    } catch (error) {
+      res.status(500).json({ message: 'Lỗi khi lấy danh sách nhà cung cấp', error });
+    }
+  };
 // Thêm phiếu nhập kho mới
 exports.addWarehouseEntry = async (req, res) => {
     try {
@@ -18,7 +27,8 @@ exports.addWarehouseEntry = async (req, res) => {
         });
 
         await newEntry.save();
-        res.status(201).json({ message: 'Phiếu nhập kho đã được thêm thành công!', entry: newEntry });
+        const populatedEntry = await Warehouse.findById(newEntry._id).populate('supplier');
+        res.status(201).json({ message: 'Phiếu nhập kho đã được thêm thành công!', entry: populatedEntry});
     } catch (error) {
         console.error(error); // lỗii
         res.status(500).json({ message: 'Lỗi khi thêm phiếu nhập kho', error });

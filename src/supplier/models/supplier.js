@@ -14,7 +14,7 @@ const supplierSchema = new mongoose.Schema({
   phoneNumber: {
     type: String,
   },
-  warehouses: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Warehouse' }], // Liên kết với các kho
+  // warehouses: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Warehouse' }], // Liên kết với các kho
 }, { timestamps: true });
 
 const Supplier = mongoose.model('Supplier', supplierSchema);

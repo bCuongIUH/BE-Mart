@@ -20,12 +20,12 @@ const WarehouseSchema = new mongoose.Schema({
     },
     supplier: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Supplier', // Liên kết đến model Supplier
+        ref: 'Supplier', 
         required: true,
     },
     sellingPrice: {
         type: Number,
-        default: 0, // Giá bán mặc định là 0
+        default: 0, 
     },
     status: {
         type: String,

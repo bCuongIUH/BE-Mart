@@ -1,0 +1,54 @@
+const mongoose = require('mongoose');
+
+
+const CartItemSchema = new mongoose.Schema({
+  product: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'Products', 
+    required: true 
+  },
+  quantity: { 
+    type: Number, 
+    required: true, 
+    min: 1 
+  },
+  unitPrice: { 
+    type: Number, 
+    required: true 
+  }, 
+  totalPrice: { 
+    type: Number, 
+    required: true 
+  },
+});
+
+
+const CartSchema = new mongoose.Schema({
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User', 
+    required: true
+  },
+  items: [CartItemSchema], 
+  status: {
+    type: String,
+    enum: ['ChoThanhToan', 'DaMua', 'Shipped', 'HoanTra'], 
+    default: 'ChoThanhToan' 
+  },
+  createdAt: { 
+    type: Date, 
+    default: Date.now 
+  }, 
+  updatedAt: { 
+    type: Date 
+  }, 
+});
+
+// Tự động cập nhật thời gian khi giỏ hàng được sửa đổi
+CartSchema.pre('save', function (next) {
+  this.updatedAt = Date.now();
+  next();
+});
+
+const Cart = mongoose.model('Cart', CartSchema);
+module.exports = Cart;

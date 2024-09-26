@@ -5,7 +5,7 @@ const User = require('../models/User');
 const adminMiddleware = async (req, res, next) => {
   try {
     const token = req.headers.authorization.split(' ')[1]; 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET); // Giải mã token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET); 
 
     // Tìm user dựa trên ID trong token
     const user = await User.findById(decoded.id);
@@ -19,7 +19,7 @@ const adminMiddleware = async (req, res, next) => {
       return res.status(403).json({ message: 'Bạn không có quyền truy cập' });
     }
 
-    req.user = user; // Lưu thông tin user vào request để dùng sau
+    req.user = user;
     next();
   } catch (error) {
     return res.status(401).json({ message: 'Xác thực thất bại' });
