@@ -30,7 +30,7 @@ exports.addWarehouseEntry = async (req, res) => {
         const populatedEntry = await Warehouse.findById(newEntry._id).populate('supplier');
         res.status(201).json({ message: 'Phiếu nhập kho đã được thêm thành công!', entry: populatedEntry});
     } catch (error) {
-        console.error(error); // lỗii
+        console.error(error); 
         res.status(500).json({ message: 'Lỗi khi thêm phiếu nhập kho', error });
     }
 };
@@ -64,8 +64,8 @@ exports.updateWarehouseEntry = async (req, res) => {
             const lineProduct = {
                 supplierId: entry.supplier,
                 quantity: quantityToTake,
-                unitPrice: entry.sellingPrice, // Sử dụng sellingPrice từ kho
-                totalPrice: entry.sellingPrice * quantityToTake, // Tính tổng giá
+                unitPrice: entry.sellingPrice, 
+                totalPrice: entry.sellingPrice * quantityToTake, 
                 isAvailable: true,
             };
 
@@ -74,7 +74,7 @@ exports.updateWarehouseEntry = async (req, res) => {
                 product.lines.push(lineProduct);
                 await product.save();
             } else {
-                // Nếu sản phẩm chưa tồn tại, tạo sản phẩm mới
+                
                 const newProduct = new Product({
                     name: entry.productName,
                     description: description || 'Mô tả mặc định',

@@ -32,6 +32,7 @@ const WarehouseSchema = new mongoose.Schema({
         enum: ['in stock', 'on sale'], 
         default: 'in stock',
     },
+    
 }, { timestamps: true });
 
 const Warehouse = mongoose.model('Warehouse', WarehouseSchema);

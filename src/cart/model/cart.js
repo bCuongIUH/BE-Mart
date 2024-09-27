@@ -42,6 +42,12 @@ const CartSchema = new mongoose.Schema({
   updatedAt: { 
     type: Date 
   }, 
+
+  
+  admin: { 
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+}
 });
 
 // Tự động cập nhật thời gian khi giỏ hàng được sửa đổi
