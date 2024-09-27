@@ -1,4 +1,4 @@
-// src/Warehouses/routes/warehouseRouter.js
+
 const express = require('express');
 const router = express.Router();
 const { addWarehouseEntry, updateWarehouseEntry, getAllWarehouse } = require('../controllers/warehouseController');

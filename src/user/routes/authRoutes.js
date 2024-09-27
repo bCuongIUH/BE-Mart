@@ -1,6 +1,6 @@
 const express = require('express');
 const { login,register, verifyOTP, getToken ,removeCookie,removeToken, forgotPassword, verifyForgotPasswordOTP, changePassword, getAllUsers,updateUserRole  } = require('../controllers/authController');
-const { isAuthenticated } = require('../middleware/authMiddleware');
+const { isAuthenticated, isAdmin } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 // đăng ký, đăng nhập, xác minh OTP
@@ -19,8 +19,8 @@ router.post('/verify-otp', verifyForgotPasswordOTP); // chưa xong
 // Route để đổi mật khẩu
 router.post('/change-password', changePassword); //chưa xong
 // lấy tất cả user
-router.get('/all-user',isAuthenticated, getAllUsers);
-router.patch('/users/update-role/:id',isAuthenticated, updateUserRole);
+router.get('/all-user', getAllUsers);
+router.patch('/users/update-role/:id', updateUserRole);
 
 
 

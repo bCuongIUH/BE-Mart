@@ -36,7 +36,10 @@ exports.login = async (req, res) => {
     }
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-
+    res.cookie('token', token, { 
+      httpOnly: true, 
+      secure: process.env.NODE_ENV === 'production' 
+    })
     return res.status(200).json({
       token,
       user: {
@@ -69,7 +72,7 @@ exports.register = async (req, res) => {
     const otp = generateOTP();
     const otpExpires = Date.now() + 10 * 60 * 1000; 
 
-    // Create and save the new user
+    // thông tin chứa
     const user = new User({ email, password, fullName, phoneNumber, otp, otpExpires });
     await user.save();
 
@@ -103,6 +106,10 @@ exports.verifyOTP = async (req, res) => {
     await user.save();
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    res.cookie('token', token, { 
+      httpOnly: true, 
+      secure: process.env.NODE_ENV === 'production' 
+    })
     return res.status(StatusCodes.OK).json({ token, message: 'Xác minh thành công' }); 
   } catch (error) {
     return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Có lỗi xảy ra trong quá trình xác minh OTP' });
@@ -142,6 +149,8 @@ exports.getToken = (req, res) => {
   try {
     if (req.cookies.token) {
       res.status(StatusCodes.OK).send('Token exists');
+      console.log(req.cookies);
+
     } else {
       res.status(StatusCodes.NOT_FOUND).send('Token not found');
     }

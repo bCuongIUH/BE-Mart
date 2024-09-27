@@ -4,7 +4,7 @@ const dotenv = require('dotenv');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 
-// Import các route
+
 const authRoutes = require('./src/user/routes/authRoutes');
 const productRoutes = require('./src/products/routes/productRoutes'); 
 const supplierRouter = require('./src/supplier/routes/supplierRouter');
@@ -26,13 +26,9 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 
-
-// Định tuyến cho xác thực người dùng
 app.use('/api/auth', authRoutes);
-
-// Định tuyến cho sản phẩm
 app.use('/api/products', productRoutes);
-// Sử dụng router cho các API về nhà cung cấp
+
 app.use('/api/suppliers', supplierRouter);
 app.use('/api/warehouses', warehouseRouter);
 app.use('/api/cart',cartRouter )
