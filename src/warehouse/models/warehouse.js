@@ -18,7 +18,7 @@ const WarehouseSchema = new mongoose.Schema({
         type: Date,
         required: true,
     },
-    supplier: {
+    supplier: { // sau rảnh, làm them confirm với kho, khi nhập hàng
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Supplier', 
         required: true,
@@ -32,6 +32,10 @@ const WarehouseSchema = new mongoose.Schema({
         enum: ['in stock', 'on sale'], 
         default: 'in stock',
     },
+    productId: {  // Liên kết tới Product
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Product',
+    }
     
 }, { timestamps: true });
 

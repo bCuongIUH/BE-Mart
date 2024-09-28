@@ -40,6 +40,12 @@ exports.login = async (req, res) => {
       httpOnly: true, 
       secure: process.env.NODE_ENV === 'production' 
     })
+    res.cookie('Session_JS', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 24 * 60 * 60 * 1000, // tồn tại 1 ngày
+    });
+    
     return res.status(200).json({
       token,
       user: {

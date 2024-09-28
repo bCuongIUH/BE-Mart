@@ -4,6 +4,8 @@ const ProductSchema = new mongoose.Schema({
   name: { type: String, required: true },
   description: { type: String, required: true },
   image: { type: String, required: true },
+
+
   lines: [
     {
       supplierId: { type: mongoose.Schema.Types.ObjectId, ref: 'Supplier' },
@@ -11,6 +13,7 @@ const ProductSchema = new mongoose.Schema({
       unitPrice: { type: Number, required: true },
       totalPrice: { type: Number, required: true },
       isAvailable: { type: Boolean, default: false },
+      // loai: { type: mongoose.Schema.Types.ObjectId, ref: 'loai' },
     }
   ],
 }, { timestamps: true });

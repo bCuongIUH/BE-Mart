@@ -34,10 +34,10 @@ exports.addWarehouseEntry = async (req, res) => {
         res.status(500).json({ message: 'Lỗi khi thêm phiếu nhập kho', error });
     }
 };
-// cập nhật giá sản phẩm và thông tin chi tiết ở kho để lấy sản phẩm từ kho ra bán
+//cap nhật kho để mang ra bán
 exports.updateWarehouseEntry = async (req, res) => {
     try {
-        const { sellingPrice, status, quantityToTake, description, image } = req.body;
+        const { sellingPrice, quantityToTake, description, image } = req.body;
         const entry = await Warehouse.findById(req.params.id);
 
         if (!entry) {
@@ -49,41 +49,51 @@ exports.updateWarehouseEntry = async (req, res) => {
             return res.status(400).json({ message: 'Số lượng yêu cầu lớn hơn số lượng trong kho' });
         }
 
-        // Cập nhật giá bán và trạng thái trong kho
-        entry.sellingPrice = sellingPrice || entry.sellingPrice; // Cập nhật giá bán nếu có
-        entry.status = status || entry.status;
-
-        // Giảm số lượng trong kho
+      
         entry.quantity -= quantityToTake;
+        entry.status = 'in stock';
 
-        // Nếu trạng thái là "on sale", thêm hoặc cập nhật vào collection Product
-        if (entry.status === 'on sale') {
-            const product = await Product.findOne({ name: entry.productName });
+      
+        const product = await Product.findOne({ name: entry.productName });
 
-            // Dữ liệu dòng sản phẩm
+        if (product) {
+            // Tìm dòng sản phẩm trong lines
+            const existingLine = product.lines.find(line => line.supplierId.toString() === entry.supplier.toString());
+
+            if (existingLine) {
+               
+                existingLine.unitPrice = sellingPrice; 
+                existingLine.quantity += quantityToTake; 
+                existingLine.totalPrice = existingLine.unitPrice * existingLine.quantity; 
+            } else {
+                // Tạo dòng sản phẩm mới nếu không tồn tại
+                const lineProduct = {
+                    supplierId: entry.supplier,
+                    quantity: quantityToTake,
+                    unitPrice: sellingPrice,
+                    totalPrice: sellingPrice * quantityToTake,
+                    isAvailable: true,
+                };
+                product.lines.push(lineProduct);
+            }
+            await product.save(); 
+        } else {
+            // Tạo sản phẩm mới nếu chưa tồn tại
             const lineProduct = {
                 supplierId: entry.supplier,
                 quantity: quantityToTake,
-                unitPrice: entry.sellingPrice, 
-                totalPrice: entry.sellingPrice * quantityToTake, 
+                unitPrice: sellingPrice,
+                totalPrice: sellingPrice * quantityToTake,
                 isAvailable: true,
             };
 
-            if (product) {
-                // Nếu sản phẩm đã tồn tại, cập nhật dòng sản phẩm
-                product.lines.push(lineProduct);
-                await product.save();
-            } else {
-                
-                const newProduct = new Product({
-                    name: entry.productName,
-                    description: description || 'Mô tả mặc định',
-                    image: image || 'URL hình ảnh mặc định',
-                    lines: [lineProduct] // Thêm dòng sản phẩm
-                });
-
-                await newProduct.save();
-            }
+            const newProduct = new Product({
+                name: entry.productName,
+                description: description || 'Mô tả mặc định',
+                image: image || 'URL hình ảnh mặc định',
+                lines: [lineProduct]
+            });
+            await newProduct.save();
         }
 
         // Lưu thay đổi trong kho
