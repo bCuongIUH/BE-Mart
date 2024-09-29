@@ -1,7 +1,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { addWarehouseEntry, updateWarehouseEntry, getAllWarehouse } = require('../controllers/warehouseController');
+const { addWarehouseEntry, updateWarehouseEntry, getAllWarehouse, deleteWarehouseEntry } = require('../controllers/warehouseController');
 
 // Thêm phiếu nhập kho
 router.post('/add', addWarehouseEntry);
@@ -10,4 +10,5 @@ router.post('/add', addWarehouseEntry);
 router.put('/:id', updateWarehouseEntry);
 //
 router.get('/', getAllWarehouse)
+router.delete('/delete/:id', deleteWarehouseEntry);
 module.exports = router;

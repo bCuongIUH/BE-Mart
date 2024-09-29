@@ -35,6 +35,11 @@ const WarehouseSchema = new mongoose.Schema({
     productId: {  // Liên kết tới Product
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Product',
+    },
+    createdBy: {  // Thêm trường này để lưu người thêm phiếu
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',  
+        required: true,
     }
     
 }, { timestamps: true });

@@ -14,8 +14,7 @@ exports.getAllWarehouse = async (req, res) => {
 // Thêm phiếu nhập kho mới
 exports.addWarehouseEntry = async (req, res) => {
     try {
-        const { productName, quantity, purchasePrice, entryDate, supplier, sellingPrice, status } = req.body;
-
+        const { productName, quantity, purchasePrice, entryDate, supplier, sellingPrice, status, createdBy } = req.body; 
         const newEntry = new Warehouse({
             productName,
             quantity,
@@ -23,17 +22,23 @@ exports.addWarehouseEntry = async (req, res) => {
             entryDate,
             supplier,
             sellingPrice,
-            status,
+            createdBy  
         });
-
         await newEntry.save();
-        const populatedEntry = await Warehouse.findById(newEntry._id).populate('supplier');
-        res.status(201).json({ message: 'Phiếu nhập kho đã được thêm thành công!', entry: populatedEntry});
+        const populatedEntry = await Warehouse.findById(newEntry._id)
+            .populate('supplier')
+            .populate('createdBy');  
+
+        res.status(201).json({ 
+            message: 'Phiếu nhập kho đã được thêm thành công!', 
+            entry: populatedEntry
+        });
     } catch (error) {
         console.error(error); 
         res.status(500).json({ message: 'Lỗi khi thêm phiếu nhập kho', error });
     }
 };
+
 //cap nhật kho để mang ra bán
 exports.updateWarehouseEntry = async (req, res) => {
     try {
@@ -102,5 +107,23 @@ exports.updateWarehouseEntry = async (req, res) => {
     } catch (error) {
         console.error("Error details:", error);
         res.status(500).json({ message: 'Lỗi khi cập nhật phiếu nhập kho', error: error.message });
+    }
+};
+// Xóa sản phẩm trong kho
+exports.deleteWarehouseEntry = async (req, res) => {
+    try {
+        const { id } = req.params; 
+        if (!id) {
+            return res.status(400).json({ message: 'ID sản phẩm không hợp lệ' });
+        }
+        const deletedEntry = await Warehouse.findByIdAndDelete(id);
+        if (!deletedEntry) {
+            return res.status(404).json({ message: 'Không tìm thấy phiếu nhập kho để xóa' });
+        }
+
+        res.status(200).json({ message: 'Phiếu nhập kho đã được xóa thành công!', entry: deletedEntry });
+    } catch (error) {
+        console.error('Lỗi khi xóa phiếu nhập kho:', error);
+        res.status(500).json({ message: 'Lỗi khi xóa phiếu nhập kho', error });
     }
 };
