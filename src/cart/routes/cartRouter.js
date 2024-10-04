@@ -14,9 +14,9 @@ router.get('/shipper', getCartShipper)
 router.get('/damua', getCartDamua)
 router.get('/hoantra', getCartHoanTra)
 //admin xem toàn bộ giỏ hàng của ngườu dùng
-router.get('/all',isAdmin, getAllCarts) //isAdmin
+router.get('/all', getAllCarts) //isAdmin
 // Xóa mục sản phẩm khỏi giỏ hàng
 router.delete('/remove', removeProductFromCart);
 //cập nhập trạng thái,s
-router.put('/update',isAuthenticated,isAdmin, updateCart)
+router.put('/update', updateCart)
 module.exports = router;

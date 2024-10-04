@@ -30,6 +30,7 @@ const CartSchema = new mongoose.Schema({
     required: true
   },
   items: [CartItemSchema], 
+  
   status: {
     type: String,
     enum: ['ChoThanhToan', 'DaMua', 'Shipped', 'HoanTra'], 

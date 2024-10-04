@@ -7,7 +7,7 @@ const { addWarehouseEntry, updateWarehouseEntry, getAllWarehouse, deleteWarehous
 router.post('/add', addWarehouseEntry);
 
 // Cập nhật phiếu nhập kho
-router.put('/:id', updateWarehouseEntry);
+router.put('/update/:id', updateWarehouseEntry);
 //
 router.get('/', getAllWarehouse)
 router.delete('/delete/:id', deleteWarehouseEntry);

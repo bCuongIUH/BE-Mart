@@ -109,6 +109,8 @@ exports.updateWarehouseEntry = async (req, res) => {
         res.status(500).json({ message: 'Lỗi khi cập nhật phiếu nhập kho', error: error.message });
     }
 };
+
+
 // Xóa sản phẩm trong kho
 exports.deleteWarehouseEntry = async (req, res) => {
     try {

@@ -40,8 +40,9 @@ const WarehouseSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',  
         required: true,
-    }
-    
+    },
+   
+    // exportDate: { type: Date, default: Date.now },
 }, { timestamps: true });
 
 const Warehouse = mongoose.model('Warehouse', WarehouseSchema);

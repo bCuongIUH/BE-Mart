@@ -5,7 +5,7 @@ exports.addSupplier = async (req, res) => {
     try {
       const { name, contactInfo, email, phoneNumber } = req.body;
   
-      // Kiểm tra nếu 'name' không có trong request body
+      
       if (!name) {
         return res.status(400).json({ message: 'Tên nhà cung cấp là bắt buộc.' });
       }
