@@ -3,6 +3,7 @@ const Cart = require('../../cart/model/cart');
 const Product = require('../../products/models/product');
 
 // Tạo hóa đơn từ giỏ hàng đã mua
+//update ngày 10/7
 exports.createBill = async (req, res) => {
   try {
     const { userId, paymentMethod } = req.body;
