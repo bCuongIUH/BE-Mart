@@ -3,11 +3,11 @@ const Cart = require('../../cart/model/cart');
 const Product = require('../../products/models/product');
 
 // Tạo hóa đơn từ giỏ hàng đã mua
-//update ngày 10/7
+//update ngày 10/7 
 exports.createBill = async (req, res) => {
   try {
     const { userId, paymentMethod } = req.body;
-    // console.log('userId:', userId, 'paymentMethod:', paymentMethod); 
+    console.log('userId:', userId, 'paymentMethod:', paymentMethod); 
     const cart = await Cart.findOne({ user: userId, status: 'ChoThanhToan' }).populate('items.product');
     // console.log('Giỏ hàng:', cart); 
     if (!cart || cart.items.length === 0) {
