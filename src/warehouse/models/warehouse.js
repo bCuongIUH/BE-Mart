@@ -2,6 +2,11 @@
 const mongoose = require('mongoose');
 
 const WarehouseSchema = new mongoose.Schema({
+    warehouseCode: { 
+        type: String,
+        required: true,
+        unique: true, 
+    },
     productName: {
         type: String,
         required: true,
@@ -41,6 +46,11 @@ const WarehouseSchema = new mongoose.Schema({
         ref: 'User',  
         required: true,
     },
+    createdByOut :{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',  
+        required: false,
+    }
    
     // exportDate: { type: Date, default: Date.now },
 }, { timestamps: true });

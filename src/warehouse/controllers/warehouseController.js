@@ -13,11 +13,31 @@ exports.getAllWarehouse = async (req, res) => {
       res.status(500).json({ message: 'Lỗi khi lấy danh sách nhà cung cấp', error });
     }
   };
+
+  const generateUniqueWarehouseCode = async () => {
+    let code;
+    let isUnique = false;
+
+    while (!isUnique) {
+        const randomNumber = Math.floor(Math.random() * 10000); 
+        code = `WH${randomNumber}`;
+
+      //kiểm tra tồn tại
+        const existingWarehouse = await Warehouse.findOne({ warehouseCode: code });
+        if (!existingWarehouse) {
+            isUnique = true; 
+        }
+    }
+
+    return code; 
+};
 // Thêm phiếu nhập kho mới
 exports.addWarehouseEntry = async (req, res) => {
     try {
         const { productName, quantity, purchasePrice, entryDate, supplier, sellingPrice, status, createdBy } = req.body; 
+        const uniqueCode = await generateUniqueWarehouseCode();
         const newEntry = new Warehouse({
+            warehouseCode : uniqueCode,
             productName,
             quantity,
             purchasePrice,
@@ -43,7 +63,7 @@ exports.addWarehouseEntry = async (req, res) => {
 //update sp từ kho ra bán === lấy sp từ kho ra quầy
 exports.updateWarehouseEntry = async (req, res) => {
     try {
-        const { sellingPrice, quantityToTake, description, image, categoryId } = req.body;
+        const { sellingPrice, quantityToTake, description, image, categoryId, createdByOut } = req.body; 
         const entry = await Warehouse.findById(req.params.id);
 
         if (!entry) {
@@ -55,7 +75,10 @@ exports.updateWarehouseEntry = async (req, res) => {
 
         entry.quantity -= quantityToTake;
         entry.status = 'in stock';
-        
+
+       
+        entry.createdByOut = createdByOut; 
+
         const category = await Category.findById(categoryId); 
         if (!category) {
             return res.status(400).json({ message: 'Category không hợp lệ' });
@@ -64,7 +87,6 @@ exports.updateWarehouseEntry = async (req, res) => {
         const product = await Product.findOne({ name: entry.productName });
 
         if (product) {
-            // Tìm dòng sản phẩm trong lines
             const existingLine = product.lines.find(line => line.supplierId.toString() === entry.supplier.toString());
 
             if (existingLine) {
@@ -111,6 +133,7 @@ exports.updateWarehouseEntry = async (req, res) => {
         res.status(500).json({ message: 'Lỗi khi cập nhật phiếu nhập kho', error: error.message });
     }
 };
+
 
 
 // Xóa sản phẩm trong kho
