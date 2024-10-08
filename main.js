@@ -9,6 +9,7 @@ const supplierRouter = require('./src/supplier/routes/supplierRouter');
 const warehouseRouter = require('./src/warehouse/routes/warehouseRouter');
 const cartRouter = require('./src/cart/routes/cartRouter');
 const billRouter = require('./src/bill/routes/billRouter');
+const categoryRoutes = require('./src/products/routes/categoryRoutes');
 
 
 dotenv.config();
@@ -33,6 +34,7 @@ app.use('/api/suppliers', supplierRouter);
 app.use('/api/warehouses', warehouseRouter);
 app.use('/api/cart',cartRouter )
 app.use('/api/bill',billRouter )
+app.use('/api/categories', categoryRoutes);
 // Kết nối MongoDB
 mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log('Kết nối MongoDB thành công'))

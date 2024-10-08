@@ -16,7 +16,9 @@ const ProductSchema = new mongoose.Schema({
       // loai: { type: mongoose.Schema.Types.ObjectId, ref: 'loai' },
     }
   ],
-}, { timestamps: true });
+  category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', required: true }, 
+}, 
+{ timestamps: true });
 
 const Product = mongoose.model('Products', ProductSchema);
 module.exports = Product;
