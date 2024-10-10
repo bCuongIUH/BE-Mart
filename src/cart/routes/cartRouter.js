@@ -1,5 +1,5 @@
 const express = require('express');
-const { addToCart, getCart, removeProductFromCart,updateCart, getCartShipper, getCartDamua ,getCartHoanTra, getAllCarts} = require('../controllers/cartController');
+const { addToCart, getCart, removeProductFromCart,updateCart, getCartShipper, getCartDamua ,getCartHoanTra, getAllCarts, getAllCartsExceptPending} = require('../controllers/cartController');
 const { isAdmin,isAuthenticated } = require('../../user/middleware/authMiddleware');
 
 
@@ -15,6 +15,7 @@ router.get('/damua', getCartDamua)
 router.get('/hoantra', getCartHoanTra)
 //admin xem toàn bộ giỏ hàng của ngườu dùng
 router.get('/all', getAllCarts) //isAdmin
+router.get('/allpending', getAllCartsExceptPending)
 // Xóa mục sản phẩm khỏi giỏ hàng
 router.delete('/remove', removeProductFromCart);
 //cập nhập trạng thái,s
