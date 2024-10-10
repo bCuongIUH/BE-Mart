@@ -21,6 +21,7 @@ exports.createBill = async (req, res) => {
       items: cart.items,
       totalAmount,
       paymentMethod,
+      purchaseType : 'Online'
     });
     await bill.save();
 
@@ -60,7 +61,8 @@ exports.createDirectPurchaseBill = async (req, res) => {
       totalAmount,
       paymentMethod,
       phoneNumber, 
-      status: 'Paid' 
+      status: 'Paid' ,
+      purchaseType :'Offline'
     });
     await bill.save();
     // Giảm số lượng từng sản phẩm trong kho
@@ -97,6 +99,43 @@ exports.getBillsByUser = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+// Lấy danh sách tất cả hóa đơn
+exports.getAllBills = async (req, res) => {
+  try {
+    const bills = await Bill.find().populate('items.product'); 
+    if (!bills || bills.length === 0) {
+      return res.status(404).json({ message: 'Không có hóa đơn nào' });
+    }
+    res.status(200).json(bills); 
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+// Lấy danh sách hóa đơn mua trực tuyến
+exports.getOnlineBills = async (req, res) => {
+  try {
+    const bills = await Bill.find({ purchaseType: 'Online' }).populate('items.product');
+    if (!bills || bills.length === 0) {
+      return res.status(404).json({ message: 'Không có hóa đơn mua trực tuyến nào' });
+    }
+    res.status(200).json(bills); 
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+//mua hàng trực tiếp
+exports.getOfflineBills = async (req, res) => {
+  try {
+    const bills = await Bill.find({ purchaseType: 'Offline' }).populate('items.product');
+    if (!bills || bills.length === 0) {
+      return res.status(404).json({ message: 'Không có hóa đơn mua trực tuyến nào' });
+    }
+    res.status(200).json(bills); 
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 
 // Lấy thông tin hóa đơn theo trạng thái
 exports.getBillsByStatus = async (req, res) => {

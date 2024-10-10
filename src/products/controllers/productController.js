@@ -74,3 +74,28 @@ exports.deleteProduct = async (req, res) => {
     res.status(500).json({ message: 'Lỗi khi xóa sản phẩm', error });
   }
 };
+//test
+exports.getTest = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1; 
+    const limit = parseInt(req.query.limit) || 3; 
+
+    const skip = (page - 1) * limit;
+
+    const products = await Product.find()
+      .skip(skip)
+      .limit(limit);
+
+    const totalProducts = await Product.countDocuments();
+    const totalPages = Math.ceil(totalProducts / limit);
+
+    res.status(200).json({
+      products,
+      currentPage: page,
+      totalPages,
+    });
+  } catch (error) {
+    console.error('Lỗi khi lấy sản phẩm:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
