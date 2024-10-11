@@ -170,7 +170,9 @@ exports.updateWarehouseEntry = async (req, res) => {
 
             if (existingLine) {
                 existingLine.unitPrice = sellingPrice;
-                existingLine.quantity += quantityToTake;
+                // existingLine.quantity += quantityToTake;
+                existingLine.quantity += parseInt(quantityToTake, 10);
+
                 existingLine.totalPrice = existingLine.unitPrice * existingLine.quantity;
             } else {
                 const lineProduct = {
