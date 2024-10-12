@@ -1,24 +1,25 @@
 const mongoose = require('mongoose');
 
+
 const ProductSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  description: { type: String, required: true },
-  image: { type: String, required: true },
+    code: { type: String, unique: true },
+    barcode: { type: String, unique: true },
+    name: { type: String, required: true },
+    description: { type: String, required: true },
+    image: { type: String, required: true },
+    category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', required: true },
+    quantity: { type: Number, default: 0 },
+    lines: [{
+        supplierId: { type: mongoose.Schema.Types.ObjectId, ref: 'Supplier', required: true },
+        quantity: { type: Number, required: true, default: 0 },
+        //unitPrice: { type: Number, required: true },
+        //totalPrice: { type: Number, required: true },
+        isAvailable: { type: Boolean, default: false },
+        startDate: { type: Date, default: Date.now },
+        endDate: { type: Date }
+    }]
+}, { timestamps: true });
 
 
-  lines: [
-    {
-      supplierId: { type: mongoose.Schema.Types.ObjectId, ref: 'Supplier' },
-      quantity: { type: Number, required: true },
-      unitPrice: { type: Number, required: true },
-      totalPrice: { type: Number, required: true },
-      isAvailable: { type: Boolean, default: false },
-      // loai: { type: mongoose.Schema.Types.ObjectId, ref: 'loai' },
-    }
-  ],
-  category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', required: true }, 
-}, 
-{ timestamps: true });
-
-const Product = mongoose.model('Products', ProductSchema);
+const Product = mongoose.model('Product', ProductSchema);
 module.exports = Product;

@@ -1,59 +1,17 @@
-
 const mongoose = require('mongoose');
 
-const WarehouseSchema = new mongoose.Schema({
-    warehouseCode: { 
-        type: String,
-        required: true,
-        unique: true, 
-    },
-    productName: {
-        type: String,
-        required: true,
-    },
-    quantity: {
-        type: Number,
-        required: true,
-    },
-    purchasePrice: {
-        type: Number,
-        required: true,
-    },
-    entryDate: {
-        type: Date,
-        required: true,
-    },
-    supplier: { // sau rảnh, làm them confirm với kho, khi nhập hàng
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Supplier', 
-        required: true,
-    },
-    sellingPrice: {
-        type: Number,
-        default: 0, 
-    },
-    status: {
-        type: String,
-        enum: ['in stock', 'on sale'], 
-        default: 'in stock',
-    },
-    productId: {  // Liên kết tới Product
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Product',
-    },
-    createdBy: {  // Thêm trường này để lưu người thêm phiếu
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',  
-        required: true,
-    },
-    createdByOut :{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',  
-        required: false,
-    }
-   
-    // exportDate: { type: Date, default: Date.now },
+const WarehouseEntrySchema = new mongoose.Schema({
+    entryCode: { type: String, required: true },
+    enteredBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    lines: [{
+        productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
+        supplierId: { type: mongoose.Schema.Types.ObjectId, ref: 'Supplier', required: true },
+        quantity: { type: Number, required: true },
+        price: { type: Number, required: true },
+        //unitId: { type: mongoose.Schema.Types.ObjectId, ref: 'Unit', required: true }
+    }]
 }, { timestamps: true });
 
-const Warehouse = mongoose.model('Warehouse', WarehouseSchema);
-module.exports = Warehouse;
+const WarehouseEntry = mongoose.model('WarehouseEntry', WarehouseEntrySchema);
+
+module.exports = WarehouseEntry;
