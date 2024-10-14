@@ -148,3 +148,24 @@ exports.nhapHang = async (req, res) => {
       return res.status(500).json({ message: 'Lỗi server' });
   }
 };
+exports.capnhatGia = async (req, res) => {
+  const { id } = req.params; // Lấy ID sản phẩm từ params
+  const { price, isAvailable } = req.body; // Lấy giá và trạng thái từ body
+
+  try {
+      // Tìm và cập nhật sản phẩm
+      const product = await Product.findByIdAndUpdate(
+          id,
+          { price, isAvailable }, // Cập nhật giá và trạng thái
+          { new: true } // Trả về sản phẩm đã cập nhật
+      );
+
+      if (!product) {
+          return res.status(404).json({ message: 'Sản phẩm không tồn tại' });
+      }
+
+      res.status(200).json({ message: 'Cập nhật sản phẩm thành công', product });
+  } catch (error) {
+      res.status(500).json({ message: 'Lỗi khi cập nhật sản phẩm: ' + error.message });
+  }
+};

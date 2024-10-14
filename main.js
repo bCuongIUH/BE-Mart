@@ -11,7 +11,7 @@ const cartRouter = require('./src/cart/routes/cartRouter');
 const billRouter = require('./src/bill/routes/billRouter');
 const categoryRoutes = require('./src/products/routes/categoryRoutes');
 const unitRoutes = require('./src/products/routes/unitRoutes')
-
+const promationRouter = require('./src/promotion/router/promationRouter')
 dotenv.config();
 const app = express();
 
@@ -36,6 +36,7 @@ app.use('/api/cart',cartRouter )
 app.use('/api/bill',billRouter )
 app.use('/api/categories', categoryRoutes);
 app.use('/api/units',unitRoutes)
+app.use('/api/promotions',promationRouter)
 // Kết nối MongoDB
 mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log('Kết nối MongoDB thành công'))

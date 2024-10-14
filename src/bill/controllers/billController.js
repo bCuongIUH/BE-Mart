@@ -54,7 +54,7 @@ exports.createDirectPurchaseBill = async (req, res) => {
     if (!items || items.length === 0) {
       return res.status(400).json({ message: 'Danh sách sản phẩm không hợp lệ' });
     }
-    const totalAmount = items.reduce((acc, item) => acc + (item.unitPrice * item.quantity), 0);
+    const totalAmount = items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
     const bill = new Bill({
       user: null, 
       items,
@@ -71,7 +71,7 @@ exports.createDirectPurchaseBill = async (req, res) => {
       if (!product) {
         return res.status(404).json({ message: `Không tìm thấy sản phẩm với ID ${item.product}` });
       }
-      const productLine = product.lines[0]; 
+      const productLine = product; 
       const newQuantity = productLine.quantity - item.quantity;
       if (newQuantity < 0) {
         return res.status(400).json({ message: `Số lượng sản phẩm ${product.name} trong kho không đủ` });
