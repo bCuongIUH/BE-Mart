@@ -16,7 +16,7 @@ router.get('/:id', getProductById);
 router.put('/itemproduct/:id', updateProduct);
 router.put('/:id', nhapHang);
 router.put('/status/:id', capnhatTrangThai);
+router.put('/price/:id', capnhatGia);
 // // Xóa sản phẩm
 router.delete('/:id', deleteProduct);
-router.put('/price/:id', capnhatGia);
 module.exports = router;
