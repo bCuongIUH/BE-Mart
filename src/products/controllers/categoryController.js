@@ -3,7 +3,7 @@ const Category = require('../models/category');
 //lấy ds
 exports.getCategories = async (req, res) => {
     try {
-        const categories = await Category.find();
+        const categories = await Category.find().lean();
         if (categories.length === 0) {
             return res.status(404).json({ message: 'Không có nhóm hàng nào được tìm thấy' });
         }

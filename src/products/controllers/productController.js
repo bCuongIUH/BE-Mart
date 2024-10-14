@@ -6,7 +6,7 @@ const Unit = require('../models/unit');
 
 exports.createProduct = async (req, res) => {
   try {
-    const { code, barcode, name, description, categoryId, lines } = req.body;
+    const { code, barcode, name, description, categoryId , price, lines } = req.body;
     const category = await Category.findById(categoryId);
     if (!category) {
       return res.status(400).json({ message: 'Danh mục không hợp lệ' });
@@ -23,6 +23,7 @@ exports.createProduct = async (req, res) => {
       description: description || 'Mô tả mặc định',
       image: imageUrl,
       category: categoryId,
+      price : 0,
       lines: lines || [] 
     });
 
@@ -50,7 +51,7 @@ exports.deleteProduct = async (req, res) => {
 //cập nhật
 exports.updateProduct = async (req, res) => {
   try {
-    const {code, Barcode, name, description, categoryId } = req.body;
+    const {code, barcode, name, description, categoryId } = req.body;
     const product = await Product.findById(req.params.id);
     if (!product) {
       return res.status(404).json({ message: 'Không tìm thấy sản phẩm' });
@@ -72,7 +73,7 @@ if (!category) {
       req.params.id,
       {
         code: code || product.code,
-        Barcode: Barcode || product.Barcode,
+        barcode: barcode || product.barcode,
         name: name || product.name, 
         description: description || product.description, 
         category: categoryId || product.category, 
@@ -149,8 +150,8 @@ exports.nhapHang = async (req, res) => {
   }
 };
 exports.capnhatGia = async (req, res) => {
-  const { id } = req.params; // Lấy ID sản phẩm từ params
-  const { price, isAvailable } = req.body; // Lấy giá và trạng thái từ body
+  const { id } = req.params; 
+  const { price, isAvailable } = req.body; 
 
   try {
       // Tìm và cập nhật sản phẩm
@@ -167,5 +168,26 @@ exports.capnhatGia = async (req, res) => {
       res.status(200).json({ message: 'Cập nhật sản phẩm thành công', product });
   } catch (error) {
       res.status(500).json({ message: 'Lỗi khi cập nhật sản phẩm: ' + error.message });
+  }
+};
+// cập nhật trạng thái
+exports.capnhatTrangThai = async (req, res) => {
+  const { id } = req.params; 
+  const { isAvailable } = req.body; 
+
+  try {
+      const product = await Product.findByIdAndUpdate(
+          id,
+          { isAvailable },
+          { new: true }
+      );
+
+      if (!product) {
+          return res.status(404).json({ message: 'Sản phẩm không tồn tại' });
+      }
+
+      res.status(200).json({ message: 'Cập nhật trạng thái sản phẩm thành công', product });
+  } catch (error) {
+      res.status(500).json({ message: 'Lỗi khi cập nhật trạng thái sản phẩm: ' + error.message });
   }
 };

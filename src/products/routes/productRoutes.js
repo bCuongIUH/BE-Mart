@@ -1,7 +1,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { addProduct, getAllProducts, getProductById, updateProduct, deleteProduct,getTest ,createProduct,nhapHang, capnhatGia} = require('../controllers/productController');
+const { addProduct, getAllProducts, getProductById, updateProduct, deleteProduct,getTest ,createProduct,nhapHang, capnhatGia, capnhatTrangThai} = require('../controllers/productController');
 const upload = require('../../config/multerConfig');
 
 // Tạo sản phẩm mới
@@ -15,7 +15,7 @@ router.get('/:id', getProductById);
 // // Cập nhật sản phẩm
 router.put('/itemproduct/:id', updateProduct);
 router.put('/:id', nhapHang);
-
+router.put('/status/:id', capnhatTrangThai);
 // // Xóa sản phẩm
 router.delete('/:id', deleteProduct);
 router.put('/price/:id', capnhatGia);
