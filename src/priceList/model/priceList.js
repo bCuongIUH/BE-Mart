@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-// Schema for the Price List (Bảng giá)
+
 const PriceListSchema = new mongoose.Schema({
     code: { type: String, required: true, unique: true },
     name: { type: String, required: true }, 
@@ -11,12 +11,11 @@ const PriceListSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now },
     products: [
         {
-            productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
-            price: { type: Number, required: true },
+            productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true }, 
+            price: { type: Number, required: true } 
         }
     ]
 }, { timestamps: true });
-
 
 const PriceList = mongoose.model('PriceList', PriceListSchema);
 

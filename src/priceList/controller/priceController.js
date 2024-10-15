@@ -5,18 +5,31 @@ const mongoose = require('mongoose');
 // tạo bảng giá header
 exports.createPriceList = async (req, res) => {
   try {
-      const { code, name, startDate, endDate, isActive, description } = req.body;
+      const { code, name, startDate, endDate, isActive = true, description } = req.body;
+   
 
-      // kiểm tra thông tin
+      // Log incoming request body
+      console.log("Incoming request body:", req.body);
+
+      // Validate required fields
       if (!code || !name || !startDate || !endDate) {
           return res.status(400).json({ success: false, message: 'Thiếu thông tin bắt buộc.' });
       }
 
-  //kiếm tra ngày nhập
+      // Convert to Date objects
+      const startDateObj = new Date(startDate);
+      const endDateObj = new Date(endDate);
+
+      // Validate dates
+      if (isNaN(startDateObj.getTime()) || isNaN(endDateObj.getTime())) {
+          return res.status(400).json({ success: false, message: 'Ngày bắt đầu hoặc ngày kết thúc không hợp lệ.' });
+      }
+
+      // Check for overlapping price lists
       const existingPriceLists = await PriceList.find({
           $or: [
-              { startDate: { $lte: endDate, $gte: startDate } }, // Overlapping
-              { endDate: { $gte: startDate, $lte: endDate } } // Overlapping
+              { startDate: { $lte: endDateObj, $gte: startDateObj } }, // Overlapping
+              { endDate: { $gte: startDateObj, $lte: endDateObj } } // Overlapping
           ]
       });
 
@@ -28,8 +41,8 @@ exports.createPriceList = async (req, res) => {
       const newPriceList = new PriceList({
           code,
           name,
-          startDate,
-          endDate,
+          startDate: startDateObj,
+          endDate: endDateObj,
           isActive,
           description
       });
@@ -38,7 +51,7 @@ exports.createPriceList = async (req, res) => {
 
       res.status(201).json({ success: true, message: 'Bảng giá đã được tạo!', priceList: newPriceList });
   } catch (error) {
-      console.error(error);
+      console.error("Error creating price list:", error);
       res.status(500).json({ success: false, message: 'Không thể tạo bảng giá', error: error.message });
   }
 };
@@ -110,19 +123,27 @@ exports.createPriceList = async (req, res) => {
     const { products, priceListId } = req.body;
 
     try {
+        if (!mongoose.Types.ObjectId.isValid(priceListId)) {
+            return res.status(400).json({ success: false, message: 'ID bảng giá không hợp lệ.' });
+        }
+
         const priceList = await PriceList.findById(priceListId);
         if (!priceList) {
             return res.status(404).json({ success: false, message: 'Không tìm thấy bảng giá' });
         }
 
         const currentDate = new Date();
-        // Lặp qua các sản phẩm để cập nhật hoặc thêm mới
+
         for (const product of products) {
-            const productId = new mongoose.Types.ObjectId(product.productId);
+            const productId = product.productId; // Lấy productId từ sản phẩm
+
+            if (!mongoose.Types.ObjectId.isValid(productId)) {
+                return res.status(400).json({ success: false, message: 'ID sản phẩm không hợp lệ.' });
+            }
+
             const price = product.price;
 
-            // Kiểm tra xem sản phẩm đã có trong priceLists chưa
-            const existingProductIndex = priceList.products.findIndex(p => p.productId.toString() === productId.toString());
+            const existingProductIndex = priceList.products.findIndex(p => p.productId.toString() === productId);
 
             if (existingProductIndex !== -1) {
                 // Nếu sản phẩm đã có, cập nhật giá
@@ -130,24 +151,22 @@ exports.createPriceList = async (req, res) => {
             } else {
                 // Nếu sản phẩm chưa có, thêm vào mảng products
                 priceList.products.push({
-                    productId,
+                    productId: productId, // Thêm productId trực tiếp
                     price
                 });
             }
 
             // Cập nhật thông tin giá cho sản phẩm trong Product model
             if (currentDate >= priceList.startDate) {
-                // Nếu ngày hiện tại lớn hơn hoặc bằng ngày bắt đầu, cập nhật currentPrice
                 await Product.findByIdAndUpdate(
                     productId,
                     {
                         currentPrice: price,
-                        $addToSet: { priceLists: { priceListId: priceListId } } // Thêm priceListId vào mảng priceLists
+                        $addToSet: { priceLists: { priceListId: priceListId } }
                     },
                     { new: true }
                 );
             } else {
-                // Nếu không, chỉ cần đảm bảo currentPrice là 0
                 await Product.findByIdAndUpdate(
                     productId,
                     {
