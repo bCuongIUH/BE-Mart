@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Promotion = require('../models/promotionModel');
 
 // Lấy danh sách tất cả các chương trình khuyến mãi

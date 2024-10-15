@@ -39,8 +39,8 @@ const ProductSchema = new mongoose.Schema({
     image: { type: String, required: true },
     category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', required: true },
     quantity: { type: Number, default: 0 },
-    //price: { type: Number, default: 0, required: true }, 
-    isAvailable: { type: Boolean, default: false }, 
+    isAvailable: { type: Boolean, default: false },
+    currentPrice: { type: Number, default: 0 }, 
 
     lines: [{
         supplierId: { type: mongoose.Schema.Types.ObjectId, ref: 'Supplier', required: true },
@@ -50,13 +50,10 @@ const ProductSchema = new mongoose.Schema({
         endDate: { type: Date }
     }],
 
-    // Danh sách khoảng giá theo thời gian
     priceLists: [{
         priceListId: { type: mongoose.Schema.Types.ObjectId, ref: 'PriceList', required: true },
-        // price: { type: Number, required: true },
         isActive: { type: Boolean, default: true } 
     }]
-    
 }, { timestamps: true });
 
 const Product = mongoose.model('Products', ProductSchema);
