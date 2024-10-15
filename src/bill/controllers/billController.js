@@ -54,7 +54,7 @@ exports.createDirectPurchaseBill = async (req, res) => {
     if (!items || items.length === 0) {
       return res.status(400).json({ message: 'Danh sách sản phẩm không hợp lệ' });
     }
-    const totalAmount = items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+    const totalAmount = items.reduce((acc, item) => acc + (item.currentPrice * item.quantity), 0);
     const bill = new Bill({
       user: null, 
       items,

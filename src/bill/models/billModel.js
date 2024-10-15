@@ -16,7 +16,7 @@ const billSchema = new mongoose.Schema({
         type: Number, 
         required: true 
       },
-      price: { 
+      currentPrice: { 
         type: Number, 
         required: true 
       },
