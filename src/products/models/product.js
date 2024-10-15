@@ -31,13 +31,6 @@
 // module.exports = Product;
 const mongoose = require('mongoose');
 
-const PriceRangeSchema = new mongoose.Schema({
-    price: { type: Number, required: true }, 
-    startDate: { type: Date, required: true }, 
-    endDate: { type: Date, required: true }, 
-    isActive: { type: Boolean, default: true }
-});
-
 const ProductSchema = new mongoose.Schema({
     code: { type: String, unique: true },
     barcode: { type: String, unique: true },
@@ -46,7 +39,7 @@ const ProductSchema = new mongoose.Schema({
     image: { type: String, required: true },
     category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', required: true },
     quantity: { type: Number, default: 0 },
-    price: { type: Number, default: 0, required: true }, 
+    //price: { type: Number, default: 0, required: true }, 
     isAvailable: { type: Boolean, default: false }, 
 
     lines: [{
@@ -58,7 +51,11 @@ const ProductSchema = new mongoose.Schema({
     }],
 
     // Danh sách khoảng giá theo thời gian
-    priceRanges: [PriceRangeSchema]
+    priceLists: [{
+        priceListId: { type: mongoose.Schema.Types.ObjectId, ref: 'PriceList', required: true },
+        // price: { type: Number, required: true },
+        isActive: { type: Boolean, default: true } 
+    }]
     
 }, { timestamps: true });
 

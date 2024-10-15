@@ -6,7 +6,7 @@ const Unit = require('../models/unit');
 
 exports.createProduct = async (req, res) => {
   try {
-    const { code, barcode, name, description, categoryId , price, lines } = req.body;
+    const { code, barcode, name, description, categoryId , lines ,priceLists } = req.body;
     const category = await Category.findById(categoryId);
     if (!category) {
       return res.status(400).json({ message: 'Danh mục không hợp lệ' });
@@ -24,7 +24,8 @@ exports.createProduct = async (req, res) => {
       image: imageUrl,
       category: categoryId,
       price : 0,
-      lines: lines || [] 
+      lines: lines || [] ,
+      priceLists :priceLists || []
     });
 
     await newProduct.save();
