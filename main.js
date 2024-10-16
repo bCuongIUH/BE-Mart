@@ -47,8 +47,8 @@ mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopol
     console.log('Kết nối MongoDB thành công');
 
     // Thiết lập cron job chạy mỗi phút
-    cron.schedule('* * * * *', async () => {
-      console.log('Chạy cron job mỗi phút để test');
+    cron.schedule('0 0 * * *', async () => {
+      console.log('Chạy cron job thành công');
       await updatePricesCronJob();
     });
   })
