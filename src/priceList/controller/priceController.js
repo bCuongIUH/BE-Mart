@@ -1,62 +1,7 @@
 const PriceList = require('../model/priceList'); 
 const Product = require('../../products/models/product'); 
 const mongoose = require('mongoose'); 
-
-// tạo bảng giá header
-exports.createPriceList = async (req, res) => {
-  try {
-    const { code, name, startDate, endDate,  description } = req.body;
-
-
-    console.log("nhập zoooo:", req.body);
-
-
-    if (!code || !name || !startDate || !endDate) {
-      return res.status(400).json({ success: false, message: 'Thiếu thông tin bắt buộc.' });
-    }
-
-
-    const startDateObj = new Date(startDate);
-    const endDateObj = new Date(endDate);
-
-    if (isNaN(startDateObj.getTime()) || isNaN(endDateObj.getTime())) {
-      return res.status(400).json({ success: false, message: 'Ngày bắt đầu hoặc ngày kết thúc không hợp lệ.' });
-    }
-
-    const existingPriceLists = await PriceList.find({
-      $or: [
-        { 
-          startDate: { $lte: endDateObj, $gte: startDateObj } 
-        }, 
-        { 
-          endDate: { $gte: startDateObj, $lte: endDateObj } 
-        }
-      ]
-    });
-
-    if (existingPriceLists.length > 0) {
-      return res.status(400).json({ success: false, message: 'Đã có bảng giá tồn tại trong khoảng thời gian này.' });
-    }
-
-    
-    const newPriceList = new PriceList({
-      code,
-      name,
-      startDate: startDateObj, 
-      endDate: endDateObj,      
-      isActive : false,
-      description
-    });
-
-    await newPriceList.save();
-
-    res.status(201).json({ success: true, message: 'Bảng giá đã được tạo!', priceList: newPriceList });
-  } catch (error) {
-    console.error("Error creating price list:", error);
-    res.status(500).json({ success: false, message: 'Không thể tạo bảng giá', error: error.message });
-  }
-};
-
+const cron = require('node-cron');
 
 //lấy ds bảng giá
   exports.getAllPriceLists = async (req, res) => {
@@ -120,71 +65,228 @@ exports.createPriceList = async (req, res) => {
       res.status(500).json({ success: false, message: 'Lỗi khi xóa bảng giá', error: error.message });
     }
   };
-  //thêm giá cho sp
-  exports.addPricesToPriceList = async (req, res) => {
-    const { products, priceListId } = req.body;
+  // Tạo bảng giá header
+exports.createPriceList = async (req, res) => {
+  try {
+      const { code, name, startDate, endDate, description } = req.body;
 
-    try {
-        if (!mongoose.Types.ObjectId.isValid(priceListId)) {
-            return res.status(400).json({ success: false, message: 'ID bảng giá không hợp lệ.' });
-        }
+      if (!code || !name || !startDate || !endDate) {
+          return res.status(400).json({ success: false, message: 'Thiếu thông tin bắt buộc.' });
+      }
 
-        const priceList = await PriceList.findById(priceListId);
-        if (!priceList) {
-            return res.status(404).json({ success: false, message: 'Không tìm thấy bảng giá' });
-        }
+      const startDateObj = new Date(startDate);
+      const endDateObj = new Date(endDate);
 
-        const currentDate = new Date();
+      if (isNaN(startDateObj.getTime()) || isNaN(endDateObj.getTime())) {
+          return res.status(400).json({ success: false, message: 'Ngày bắt đầu hoặc ngày kết thúc không hợp lệ.' });
+      }
 
-        for (const product of products) {
-            const productId = product.productId;
+      const existingPriceLists = await PriceList.find({
+          $or: [
+              { startDate: { $lte: endDateObj, $gte: startDateObj } },
+              { endDate: { $gte: startDateObj, $lte: endDateObj } }
+          ]
+      });
 
-            if (!mongoose.Types.ObjectId.isValid(productId)) {
-                return res.status(400).json({ success: false, message: 'ID sản phẩm không hợp lệ.' });
-            }
+      if (existingPriceLists.length > 0) {
+          return res.status(400).json({ success: false, message: 'Đã có bảng giá tồn tại trong khoảng thời gian này.' });
+      }
 
-            const price = product.price;
+      const newPriceList = new PriceList({
+          code,
+          name,
+          startDate: startDateObj,
+          endDate: endDateObj,
+          description
+      });
 
-            const existingProductIndex = priceList.products.findIndex(p => p.productId.toString() === productId);
-
-            if (existingProductIndex !== -1) {
-                // Nếu sản phẩm đã có, cập nhật giá
-                priceList.products[existingProductIndex].price = price;
-            } else {
-                
-                priceList.products.push({
-                    productId: productId, 
-                    price
-                });
-            }
-
-            // Cập nhật thông tin giá cho sản phẩm trong Product model
-            if (currentDate >= priceList.startDate) {
-                await Product.findByIdAndUpdate(
-                    productId,
-                    {
-                        currentPrice: price,
-                        $addToSet: { priceLists: { priceListId: priceListId } }
-                    },
-                    { new: true }
-                );
-            } else {
-                await Product.findByIdAndUpdate(
-                    productId,
-                    {
-                        currentPrice: 0,
-                        $addToSet: { priceLists: { priceListId: priceListId } }
-                    },
-                    { new: true }
-                );
-            }
-        }
-
-        await priceList.save();
-
-        return res.status(200).json({ success: true, message: 'Giá đã được thêm/cập nhật thành công!', priceList });
-    } catch (error) {
-        console.error('Lỗi khi thêm/cập nhật giá:', error);
-        return res.status(500).json({ success: false, message: 'Có lỗi xảy ra khi thêm/cập nhật giá vào bảng giá.', error: error.message });
-    }
+      await newPriceList.save();
+      res.status(201).json({ success: true, message: 'Bảng giá đã được tạo!', priceList: newPriceList });
+  } catch (error) {
+      console.error("Error creating price list:", error);
+      res.status(500).json({ success: false, message: 'Không thể tạo bảng giá', error: error.message });
+  }
 };
+
+// Cập nhật giá vào bảng giá
+
+exports.addPricesToPriceList = async (req, res) => {
+  const { products, priceListId } = req.body;
+
+  try {
+      if (!products || !Array.isArray(products) || products.length === 0) {
+          return res.status(400).json({ success: false, message: 'Danh sách sản phẩm không hợp lệ.' });
+      }
+
+      if (!mongoose.Types.ObjectId.isValid(priceListId)) {
+          return res.status(400).json({ success: false, message: 'ID bảng giá không hợp lệ.' });
+      }
+
+      const priceList = await PriceList.findById(priceListId);
+      if (!priceList) {
+          return res.status(404).json({ success: false, message: 'Không tìm thấy bảng giá' });
+      }
+
+      const currentDate = new Date();
+
+      for (const product of products) {
+          const productId = product.productId;
+
+          if (!mongoose.Types.ObjectId.isValid(productId)) {
+              return res.status(400).json({ success: false, message: 'ID sản phẩm không hợp lệ.' });
+          }
+
+          const existingProduct = await Product.findById(productId);
+          if (!existingProduct) {
+              return res.status(404).json({ success: false, message: 'Sản phẩm không tồn tại.' });
+          }
+
+          const price = product.price;
+
+          const existingProductIndex = priceList.products.findIndex(p => p.productId.toString() === productId);
+
+          if (existingProductIndex !== -1) {
+              priceList.products[existingProductIndex].price = price;
+          } else {
+              priceList.products.push({ productId: productId, price });
+          }
+
+        
+          if (priceList.isActive && currentDate >= priceList.startDate && currentDate <= priceList.endDate) {
+              await Product.findByIdAndUpdate(
+                  productId,
+                  { currentPrice: price, isAvailable: true },
+                  { new: true }
+              );
+          }
+      }
+
+      await priceList.save();
+      return res.status(200).json({ success: true, message: 'Giá đã được thêm/cập nhật thành công!', priceList });
+  } catch (error) {
+      console.error('Lỗi khi thêm/cập nhật giá:', error);
+      return res.status(500).json({ success: false, message: 'Có lỗi xảy ra khi thêm/cập nhật giá vào bảng giá.', error: error.message });
+  }
+};
+
+
+// Ngưng hoạt động bảng giá
+exports.deactivatePriceList = async (req, res) => {
+  try {
+      const { priceListId } = req.body;
+
+      const priceList = await PriceList.findById(priceListId);
+      if (!priceList) {
+          return res.status(404).json({ success: false, message: 'Bảng giá không tồn tại!' });
+      }
+
+      // Ngưng hoạt động bảng giá
+      priceList.isActive = false;
+      await priceList.save();
+
+      // Đặt giá sản phẩm thành 0
+      for (const product of priceList.products) {
+          await Product.findByIdAndUpdate(product.productId, { currentPrice: 0, isAvailable: false });
+      }
+
+      res.status(200).json({ success: true, message: 'Bảng giá đã được ngừng hoạt động!', priceList });
+  } catch (error) {
+      console.error('Lỗi khi ngừng hoạt động bảng giá:', error);
+      res.status(500).json({ success: false, message: 'Có lỗi xảy ra khi ngừng hoạt động bảng giá.', error: error.message });
+  }
+};
+
+// Kích hoạt bảng giá
+exports.activatePriceList = async (req, res) => {
+  const { priceListId } = req.body; 
+
+  try {
+     
+      if (!mongoose.Types.ObjectId.isValid(priceListId)) {
+          return res.status(400).json({ success: false, message: 'ID bảng giá không hợp lệ!' });
+      }
+
+      const priceList = await PriceList.findById(priceListId);
+      if (!priceList) {
+          return res.status(404).json({ success: false, message: 'Bảng giá không tồn tại!' });
+      }
+
+      // Kích hoạt bảng giá
+      priceList.isActive = true;
+      await priceList.save();
+
+      // Cập nhật giá cho sản phẩm
+      if (priceList.products.length > 0) {
+          const productsToUpdate = priceList.products.map(product => ({
+              productId: product.productId,
+              price: product.price
+          }));
+          req.body.products = productsToUpdate; 
+          req.body.priceListId = priceListId; 
+
+          const result = await exports.addPricesToPriceList(req, res);
+          
+          if (result && result.headersSent) {
+              return; 
+          }
+      }
+
+      res.status(200).json({ success: true, message: 'Bảng giá đã được kích hoạt!', priceList });
+  } catch (error) {
+      console.error('Lỗi khi kích hoạt bảng giá:', error);
+      res.status(500).json({ success: false, message: 'Có lỗi xảy ra khi kích hoạt bảng giá.', error: error.message });
+  }
+};
+
+
+// Cập nhật giá theo cron job
+exports.updatePricesCronJob = async () => {
+  try {
+      const currentDate = new Date();
+      const expiredPriceLists = await PriceList.find({
+          isActive: true,
+          endDate: { $lt: currentDate }
+      });
+
+      for (const priceList of expiredPriceLists) {
+          for (const priceEntry of priceList.products) {
+              const productId = priceEntry.productId;
+              await Product.findByIdAndUpdate(
+                  productId,
+                  { currentPrice: 0, isAvailable: false },
+                  { new: true }
+              );
+          }
+          priceList.isActive = false;
+          await priceList.save();
+      }
+
+      console.log('Đã cập nhật giá cho các sản phẩm từ bảng giá hết hiệu lực.');
+  } catch (error) {
+      console.error('Lỗi khi cập nhật giá qua cron job:', error);
+  }
+};
+cron.schedule('* * * * *', async () => {
+  try {
+      // Lấy tất cả các bảng giá đang hoạt động
+      const activePriceLists = await PriceList.find({
+          startDate: { $lte: new Date() },
+          endDate: { $gte: new Date() },
+      });
+
+      // Cập nhật giá cho từng sản phẩm trong bảng giá
+      for (const priceList of activePriceLists) {
+          for (const product of priceList.products) {
+              // Cập nhật giá cho sản phẩm theo bảng giá
+              await Product.updateOne(
+                  { _id: product.productId },
+                  { $set: { currentPrice: product.price, isAvailable: true } } // Cập nhật giá và đánh dấu sản phẩm là có sẵn
+              );
+          }
+      }
+
+      console.log('Giá sản phẩm đã được cập nhật thành công cho tất cả bảng giá đang hoạt động.');
+  } catch (error) {
+      console.error('Lỗi trong cron job cập nhật giá:', error);
+  }
+});

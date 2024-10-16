@@ -15,6 +15,7 @@ const promationRouter = require('./src/promotion/router/promationRouter')
 const priceListRoutes = require('./src/priceList/router/priceRouter');
 dotenv.config();
 const app = express();
+const cron = require('node-cron');
 
 // Cấu hình CORS
 app.use(cors({
@@ -39,11 +40,19 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/units',unitRoutes)
 app.use('/api/promotions',promationRouter)
 app.use('/api/price-list',priceListRoutes)
+
 // Kết nối MongoDB
 mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => console.log('Kết nối MongoDB thành công'))
-  .catch((err) => console.log('Lỗi kết nối MongoDB:', err));
+  .then(() => {
+    console.log('Kết nối MongoDB thành công');
 
+    // Thiết lập cron job chạy mỗi phút
+    cron.schedule('* * * * *', async () => {
+      console.log('Chạy cron job mỗi phút để test');
+      await updatePricesCronJob();
+    });
+  })
+  .catch((err) => console.log('Lỗi kết nối MongoDB:', err));
 // Khởi động server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
