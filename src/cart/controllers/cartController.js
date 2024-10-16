@@ -11,10 +11,10 @@ exports.addToCart = async (req, res) => {
     const product = await Product.findById(productId);
     if (!product) return res.status(404).json({ message: 'Sản phẩm không tồn tại' });
 
-    const unitPrice = product.lines[0].unitPrice;
+    const currentPrice = product.currentPrice;
 
     // Tính tổng
-    const totalPrice = unitPrice * quantity;
+    const totalPrice = currentPrice * quantity;
   
     let cart = await Cart.findOne({ user: userId, status: 'ChoThanhToan' });
     if (!cart) {
@@ -23,7 +23,7 @@ exports.addToCart = async (req, res) => {
         items: [{
           product: productId,
           quantity,
-          unitPrice,
+          currentPrice,
           totalPrice
         }]
       });
@@ -36,7 +36,7 @@ exports.addToCart = async (req, res) => {
         cart.items.push({
           product: productId,
           quantity,
-          unitPrice,
+          currentPrice,
           totalPrice
         });
       }
