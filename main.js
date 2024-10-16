@@ -11,7 +11,7 @@ const cartRouter = require('./src/cart/routes/cartRouter');
 const billRouter = require('./src/bill/routes/billRouter');
 const categoryRoutes = require('./src/products/routes/categoryRoutes');
 const unitRoutes = require('./src/products/routes/unitRoutes')
-const promationRouter = require('./src/promotion/router/promationRouter')
+const promationRouter = require('./src/promotion/router/promotionRouter')
 const priceListRoutes = require('./src/priceList/router/priceRouter');
 dotenv.config();
 const app = express();
@@ -19,7 +19,7 @@ const cron = require('node-cron');
 
 // Cấu hình CORS
 app.use(cors({
-  origin: 'http://localhost:3000', // Địa chỉ frontend 
+  origin: 'http://localhost:3001', // Địa chỉ frontend 
   // methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   credentials: true
 }));

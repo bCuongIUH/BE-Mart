@@ -48,6 +48,51 @@ exports.addToCart = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+//
+exports.addToCartOffline = async (req, res) => {
+  try {
+    const { productId, quantity } = req.body; 
+     
+    const product = await Product.findById(productId);
+    if (!product) return res.status(404).json({ message: 'Sản phẩm không tồn tại' });
+
+    const unitPrice = product.currentPrice;
+
+    // Tính tổng
+    const totalPrice = unitPrice * quantity;
+  
+    let cart = await Cart.findOne({  status: 'ChoThanhToan' }); 
+    if (!cart) {
+      cart = new Cart({
+        
+        items: [{
+          product: productId,
+          quantity,
+          unitPrice,
+          totalPrice
+        }]
+      });
+    } else {
+      const existingItemIndex = cart.items.findIndex(item => item.product.toString() === productId);
+      if (existingItemIndex > -1) {
+        cart.items[existingItemIndex].quantity += quantity;
+        cart.items[existingItemIndex].totalPrice += totalPrice;
+      } else {
+        cart.items.push({
+          product: productId,
+          quantity,
+          unitPrice,
+          totalPrice
+        });
+      }
+    }
+    // Lưu giỏ hàng
+    await cart.save();
+    res.status(200).json(cart);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 
 // Lấy giỏ hàng của người dùng
 exports.getCart = async (req, res) => {

@@ -1,10 +1,11 @@
 
 const express = require('express');
 const router = express.Router();
-const { addWarehouseEntry, getAllWarehouse} = require('../controllers/warehouseController');
+const { createWarehouseEntry, getAllWarehouse, nhapHang} = require('../controllers/warehouseController');
 
 
 // Thêm phiếu nhập kho
-router.post('/add', addWarehouseEntry);
+router.post('/add', createWarehouseEntry);
 router.get('/', getAllWarehouse)
+router.post('/nhap-hang', nhapHang);
 module.exports = router;
