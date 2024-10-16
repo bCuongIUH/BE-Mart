@@ -5,7 +5,7 @@ const mongoose = require('mongoose');
 // tạo bảng giá header
 exports.createPriceList = async (req, res) => {
   try {
-    const { code, name, startDate, endDate, isActive = true, description } = req.body;
+    const { code, name, startDate, endDate,  description } = req.body;
 
 
     console.log("nhập zoooo:", req.body);
@@ -44,7 +44,7 @@ exports.createPriceList = async (req, res) => {
       name,
       startDate: startDateObj, 
       endDate: endDateObj,      
-      isActive,
+      isActive : false,
       description
     });
 

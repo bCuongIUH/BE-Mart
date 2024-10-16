@@ -5,12 +5,13 @@ const PromotionSchema = new mongoose.Schema({
         description: { type: String, required: true },  
         discountType: { type: String, enum: ['percentage', 'fixed'], required: true },  
     conditions: [{
-        discountValue: { type: Number, required: true },  // Giá trị khuyến mãi
-        minimumAmount: { type: Number, required: true },  // Số tiền tối thiểu
-        maxDiscount: { type: Number, required: true },  // Giảm giá tối đa
-        applicableProducts: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],  // Sản phẩm áp dụng
-        applyToAllProducts: { type: Boolean, default: false },  // Áp dụng tất cả sản phẩm
-        startDate: { type: Date, required: true },  // Ngày bắt đầu
+        discountValue: { type: Number, required: true }, //20% giảm tiền
+        minimumAmount: { type: Number, required: true },  
+        maxDiscount: { type: Number, required: true },  
+        applicableProducts: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }], 
+       
+        applyToAllProducts: { type: Boolean, default: false },  
+        startDate: { type: Date, required: true },  
         endDate: { type: Date, required: true }  
     }]
 }, { timestamps: true });
