@@ -1,118 +1,94 @@
-// const mongoose = require('mongoose');
-// const Promotion = require('../models/promotionModel');
-
-// // Lấy danh sách tất cả các chương trình khuyến mãi
-// exports.getAllPromotions = async (req, res) => {
-//     try {
-//         const promotions = await Promotion.find();
-//         res.status(200).json(promotions);
-//     } catch (error) {
-//         res.status(500).json({ message: 'Lỗi khi lấy danh sách khuyến mãi', error });
-//     }
-// };
-
-// // Thêm chương trình khuyến mãi mới
-// exports.createPromotion = async (req, res) => {
-//   const { code, description, discountType } = req.body;
-
-//   try {
-//     // Tạo một chương trình khuyến mãi mới chỉ với phần header
-//     const newPromotion = new Promotion({
-//       code,
-//       description,
-//       discountType,
-//       //conditions: conditions || [] 
-//     });
-
-//     await newPromotion.save();
-//     res.status(201).json({ message: "Chương trình khuyến mãi được tạo thành công", promotion: newPromotion });
-//   } catch (error) {
-//     res.status(400).json({ message: "Lỗi khi tạo chương trình khuyến mãi", error: error.message });
-//   }
-// };
-
-// // Cập nhật chi tiết chương trình khuyến mãi
-// exports.updatePromotion = async (req, res) => {
-//   const { id } = req.params;
-//   const conditions = req.body; 
-
-//   try {
-//     const promotion = await Promotion.findById(id);
-
-//     if (!promotion) {
-//       return res.status(404).json({ message: "Không tìm thấy chương trình khuyến mãi" });
-//     }
-
-//     // Cập nhật phần conditions
-//     promotion.conditions = conditions; 
-//     await promotion.save();
-
-//     res.status(200).json({ message: "Điều kiện khuyến mãi đã được cập nhật thành công", promotion });
-//   } catch (error) {
-//     res.status(400).json({ message: "Lỗi khi cập nhật điều kiện khuyến mãi", error: error.message });
-//   }
-// };
-
-// // Xóa chương trình khuyến mãi
-// exports.deletePromotion = async (req, res) => {
-//     const promotionId = req.params.id;
-
-//     try {
-//         const deletedPromotion = await Promotion.findByIdAndDelete(promotionId);
-
-//         if (!deletedPromotion) {
-//             return res.status(404).json({ message: 'Không tìm thấy chương trình khuyến mãi' });
-//         }
-
-//         res.status(200).json({ message: 'Xóa khuyến mãi thành công', deletedPromotion });
-//     } catch (error) {
-//         res.status(500).json({ message: 'Lỗi khi xóa khuyến mãi', error });
-//     }
-// };
 const mongoose = require('mongoose');
 const Promotion = require('../models/promotionModel');
 const FixedDiscount = require('../models/fixedDiscountSchema');
 const PercentageDiscount = require('../models/percentageDiscountSchema ');
 const BuyXGetY = require('../models/buyXGetYSchema');
 
-// Tạo chương trình khuyến mãi mới
-exports.createPromotion = async (req, res) => {
+
+
+// Tạo chương trình khuyến mãi mới hít đờ
+
+exports.createPromotionHeader = async (req, res) => {
   try {
-    const { name, description, code, type, startDate, endDate, amount, details } = req.body;
+    const { code, name, startDate, endDate } = req.body;
 
-    // Tạo chương trình khuyến mãi
-    const promotion = new Promotion({ name, description, code, type, startDate, endDate, amount });
-    await promotion.save();
+    // Tạo header thong tin chung
+    const promotionHeader = new Promotion({ code, name, startDate, endDate });
+    await promotionHeader.save();
 
-    // Lưu khuyến mãi theo loại
-    if (type === 'fixed_discount') {
-      const fixedDiscount = new FixedDiscount({ promotionId: promotion._id, discountAmount: details.discountAmount });
-      await fixedDiscount.save();
-    } else if (type === 'percentage_discount') {
-      const percentageDiscount = new PercentageDiscount({
-        promotionId: promotion._id,
-        discountPercentage: details.discountPercentage,
-        maxDiscountAmount: details.maxDiscountAmount
-      });
-      await percentageDiscount.save();
-    } else if (type === 'buy_x_get_y') {
-      const buyXGetY = new BuyXGetY({
-        promotionId: promotion._id,
-        productXId: details.productXId,
-        quantityX: details.quantityX,
-        productYId: details.productYId,
-        quantityY: details.quantityY
-      });
-      await buyXGetY.save();
-    }
-
-    res.status(201).send({ message: 'Chương trình khuyến mãi được tạo thành công', promotion });
+    res.status(201).send({ message: 'Tạo thông tin chung bảng giá thành công', promotionHeader });
   } catch (error) {
-    res.status(500).send({ error: 'Lỗi tạo chương trình khuyến mãi', details: error.message });
-    console.error('Error creating promotion:', error);
+    res.status(500).send({ error: 'Có lỗi xảy ra', details: error.message });
+    console.error('Có lỗi xảy ra:', error);
   }
 };
 
+// khai báoo
+const validTypes = ['fixed_discount', 'percentage_discount', 'buy_x_get_y'];
+// thêm detail
+exports.addPromotionTypes = async (req, res) => {
+  try {
+    const { promotionId, promotionTypes } = req.body;
+
+    // Tìm kiếm header đã tạo
+    const promotionHeader = await Promotion.findById(promotionId);
+    console.log(promotionId);
+    
+    if (!promotionHeader) {
+      return res.status(404).send({ message: 'Không tìm thấy chương trình khuyến mãi' });
+    }
+
+    // Duyệt qua tất cả các loại 
+    for (const promo of promotionTypes) {
+      const { type, details } = promo;
+
+      if (!validTypes.includes(type)) {
+        return res.status(400).send({ message: `Loại khuyến mãi không hợp lệ: ${type}` });
+      }
+
+      let promotionType;
+      if (type === 'fixed_discount') {
+        promotionType = new FixedDiscount({
+          promotionId,
+          conditions: details.conditions 
+        });
+      } else if (type === 'percentage_discount') {
+        promotionType = new PercentageDiscount({
+          promotionId,
+          conditions: details.conditions 
+        });
+      } else if (type === 'buy_x_get_y') {
+        promotionType = new BuyXGetY({
+          promotionId,
+          conditions: details.conditions 
+        });
+      }
+      await promotionType.save();
+    }
+
+    res.status(201).send({ message: 'Thêm các loại khuyến mãi thành công' });
+  } catch (error) {
+    res.status(500).send({ error: 'Lỗi khi thêm loại khuyến mãi', details: error.message });
+    console.error('Lỗi khi thêm loại khuyến mãi:', error);
+  }
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// 
 // Lấy danh sách tất cả chương trình khuyến mãi
 exports.getAllPromotions = async (req, res) => {
   try {

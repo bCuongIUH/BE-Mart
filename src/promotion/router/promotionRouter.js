@@ -1,13 +1,11 @@
 const express = require('express');
-const { createPromotion, getAllPromotions, getPromotionById, updatePromotion, deletePromotion } = require('../controller/promotionController');
+const { createPromotionHeader, getAllPromotions, getPromotionById, updatePromotion, deletePromotion ,addPromotionTypes} = require('../controller/promotionController');
 const router = express.Router();
 
-// router.post('/', createPromotion);
-// router.put('/:id', updatePromotion);
-// router.delete('/:id', deletePromotion);
-// router.get('', getAllPromotions);
-// router.get('/:id', getPromotionById);
-router.post('/', createPromotion);
+//tao thông tin chung
+router.post('/', createPromotionHeader);
+//thông detail
+router.post('/addDetail', addPromotionTypes);
 router.get('/', getAllPromotions);
 router.get('/:id', getPromotionById);
 router.put('/:id', updatePromotion);

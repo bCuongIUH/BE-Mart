@@ -19,7 +19,7 @@ const cron = require('node-cron');
 
 // Cấu hình CORS
 app.use(cors({
-  origin: 'http://localhost:3001', // Địa chỉ frontend 
+  origin: 'http://localhost:3000', // Địa chỉ frontend 
   // methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   credentials: true
 }));
