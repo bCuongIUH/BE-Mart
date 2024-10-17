@@ -6,14 +6,16 @@ const Unit = require('../models/unit');
 
 exports.createProduct = async (req, res) => {
   try {
-    const { code, barcode, name, description, categoryId , lines ,priceLists } = req.body;
+    const { code, barcode, name, description, categoryId, lines, priceLists, supplierId } = req.body; // Đảm bảo đã lấy supplierId từ req.body
     const category = await Category.findById(categoryId);
     if (!category) {
       return res.status(400).json({ message: 'Danh mục không hợp lệ' });
     }
+
     if (!req.file) {
       return res.status(400).json({ message: 'Cần upload ảnh cho sản phẩm' });
     }
+
     const imageUrl = await uploadImageToCloudinary(req.file.path, 'product_images');
 
     const newProduct = new Product({
@@ -23,9 +25,10 @@ exports.createProduct = async (req, res) => {
       description: description || 'Mô tả mặc định',
       image: imageUrl,
       category: categoryId,
-      price : 0,
-      lines: lines || [] ,
-      priceLists :priceLists || []
+      supplier: supplierId, // Thêm trường nhà cung cấp
+      price: 0,
+      lines: lines || [],
+      priceLists: priceLists || []
     });
 
     await newProduct.save();

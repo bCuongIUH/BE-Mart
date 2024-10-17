@@ -13,7 +13,7 @@ exports.createPromotionHeader = async (req, res) => {
     const { code, name, startDate, endDate } = req.body;
 
     // Tạo header thong tin chung
-    const promotionHeader = new Promotion({ code, name, startDate, endDate });
+    const promotionHeader = new Promotion({ code, name, startDate, endDate, isActive: false });
     await promotionHeader.save();
 
     res.status(201).send({ message: 'Tạo thông tin chung bảng giá thành công', promotionHeader });
@@ -74,8 +74,27 @@ exports.addPromotionTypes = async (req, res) => {
 };
 
 
+// lấy dòng chi tiết
+exports.getPromotionDetails = async (req, res) => {
+  try {
+    const { promotionId } = req.params;
 
+    // Lấy dữ liệu từ các loại khuyến mãi
+    const fixedDiscounts = await FixedDiscount.find({ promotionId });
+    const percentageDiscounts = await PercentageDiscount.find({ promotionId });
+    const buyXGetYPromotions = await BuyXGetY.find({ promotionId });
 
+  
+    res.status(200).json({
+      fixedDiscounts,
+      percentageDiscounts,
+      buyXGetYPromotions
+    });
+  } catch (error) {
+    console.error('Lỗi khi lấy chi tiết các loại khuyến mãi:', error);
+    res.status(500).json({ message: 'Lỗi khi lấy chi tiết các loại khuyến mãi', error: error.message });
+  }
+};
 
 
 

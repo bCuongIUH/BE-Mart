@@ -19,101 +19,111 @@ exports.getAllWarehouse = async (req, res) => {
   };
 
 
-// Tạo phiếu nhập hàng
-exports.createWarehouseEntry = async (req, res) => {
-    const { supplierId, enteredBy, entryCode } = req.body; 
-
+//lấy sản phẩm theo nhà cung câp
+  exports.getProductsBySupplierId = async (req, res) => {
     try {
-        // Kiểm tra thông tin nhà cung cấp
+        const { supplierId } = req.params;
+
+        // Kiểm tra xem nhà cung cấp có tồn tại không
         const supplier = await Supplier.findById(supplierId);
         if (!supplier) {
-            return res.status(404).json({ message: 'Nhà cung cấp không tồn tại' });
+            return res.status(400).json({ message: 'Nhà cung cấp không hợp lệ' });
         }
 
-    
-        const user = await User.findById(enteredBy);
-        if (!user) {
-            return res.status(404).json({ message: 'Người dùng không tồn tại' });
-        }
+        // Lấy danh sách sản phẩm thuộc nhà cung cấp
+        const products = await Product.find({ supplier: supplierId });
 
-        if (!entryCode) {
-            return res.status(400).json({ message: 'Mã phiếu nhập hàng không được để trống.' });
-        }
-
-        // Tạo phiếu nhập hàng (header)
-        const newWarehouseEntry = new WarehouseEntry({
-            entryCode,   
-            enteredBy,
-            supplierId,
-            lines: []
-        });
-
-        // Lưu phiếu nhập hàng vào cơ sở dữ liệu
-        await newWarehouseEntry.save();
-
-        return res.status(201).json({ message: 'Phiếu nhập hàng đã được tạo!', warehouseEntry: newWarehouseEntry });
+        res.status(200).json({ products });
     } catch (error) {
-        console.error('Lỗi khi tạo phiếu nhập hàng:', error);
-        return res.status(500).json({ message: 'Lỗi server', error: error.message });
+        console.error('Lỗi khi lấy sản phẩm:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ', error: error.message });
     }
 };
-//nhaphang
-exports.nhapHang = async (req, res) => {
-    const { entryId, products } = req.body;
+// Tạo phiếu nhập hàng
+// exports.createWarehouseEntry = async (req, res) => {
+//     const { supplierId, enteredBy, entryCode,products } = req.body; 
+
+//     try {
+//         // Kiểm tra thông tin nhà cung cấp
+//         const supplier = await Supplier.findById(supplierId);
+//         if (!supplier) {
+//             return res.status(404).json({ message: 'Nhà cung cấp không tồn tại' });
+//         }
+
+    
+//         const user = await User.findById(enteredBy);
+//         if (!user) {
+//             return res.status(404).json({ message: 'Người dùng không tồn tại' });
+//         }
+
+//         if (!entryCode) {
+//             return res.status(400).json({ message: 'Mã phiếu nhập hàng không được để trống.' });
+//         }
+
+//         // Tạo phiếu nhập hàng (header)
+//         const newWarehouseEntry = new WarehouseEntry({
+//             entryCode,   
+//             enteredBy,
+//             supplierId,
+//             products
+//         });
+
+//         // Lưu phiếu nhập hàng vào cơ sở dữ liệu
+//         await newWarehouseEntry.save();
+
+//         return res.status(201).json({ message: 'Phiếu nhập hàng đã được tạo!', warehouseEntry: newWarehouseEntry });
+//     } catch (error) {
+//         console.error('Lỗi khi tạo phiếu nhập hàng:', error);
+//         return res.status(500).json({ message: 'Lỗi server', error: error.message });
+//     }
+// };
+
+
+// Nhập kho từ nhà cung cấp
+exports.createWarehouseEntry = async (req, res) => {
     try {
-        const warehouseEntry = await WarehouseEntry.findById(entryId);
-        if (!warehouseEntry) {
-            return res.status(404).json({ message: 'Phiếu nhập hàng không tồn tại' });
+        const { entryCode, supplierId, products, enteredBy } = req.body; 
+
+        if (!enteredBy || enteredBy.length !== 24) {
+            return res.status(400).json({ message: 'Nhà cung cấp không hợp lệ' });
         }
-        if (warehouseEntry.isFinalized) {
-            return res.status(400).json({ message: 'Phiếu nhập hàng này đã được hoàn tất và không thể cập nhật.' });
+        const supplier = await Supplier.findById(supplierId);
+        if (!supplier) {
+            return res.status(400).json({ message: 'Nhà cung cấp không hợp lệ' });
         }
 
-        // Đặt biến để tính tổng tiền hàng
         let totalAmount = 0;
-        // Duyệt qua từng sản phẩm trong danh sách
-        for (const product of products) {
-            const { productId, quantity, price } = product; 
 
-            // Kiểm tra ID sản phẩm
-            if (!mongoose.Types.ObjectId.isValid(productId)) {
-                return res.status(400).json({ message: 'ID sản phẩm không hợp lệ.' });
+        
+        for (const item of products) {
+            const product = await Product.findById(item.productId);
+            if (!product || product.supplier.toString() !== supplierId) {
+                return res.status(400).json({ message: `Sản phẩm với ID ${item.productId} không thuộc nhà cung cấp này.` });
             }
-
-           
-            const existingProduct = await Product.findById(productId);
-            if (!existingProduct) {
-                return res.status(404).json({ message: 'Sản phẩm không tồn tại.' });
-            }
-
             
-            const totalPrice = quantity * price;
+            // Tính tổng số tiền
+            totalAmount += item.quantity * item.price;
 
-           //line của phiếu
-            warehouseEntry.lines.push({
-                productId,
-                quantity,
-                price,
-                totalPrice,
-                isAvailable: quantity > 0
-            });
-
-            // Cập nhật số lượng sản phẩm
-            existingProduct.quantity += quantity; 
-            await existingProduct.save();
-
-            // Cộng dồn tổng tiền hàng
-            totalAmount += totalPrice;
+          
+            product.quantity += item.quantity;
+          
+            await product.save(); 
         }
-        warehouseEntry.totalAmount += totalAmount;
 
-        warehouseEntry.isFinalized = true;
+        // Tạo phiếu nhập kho
+        const newWarehouseEntry = new WarehouseEntry({
+            entryCode,
+            enteredBy,
+            supplier: supplierId,
+            totalAmount,
+            products,
+        });
 
-        await warehouseEntry.save();
+        await newWarehouseEntry.save();
 
-        return res.status(200).json({ message: 'Nhập hàng thành công!', warehouseEntry });
+        res.status(201).json({ message: 'Nhập kho thành công', warehouseEntry: newWarehouseEntry });
     } catch (error) {
-        console.error('Lỗi khi nhập hàng:', error);
-        return res.status(500).json({ message: 'Lỗi server', error: error.message });
+        console.error('Lỗi khi nhập kho:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ', error: error.message });
     }
 };
