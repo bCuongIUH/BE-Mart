@@ -7,42 +7,52 @@ const Product = require('../../products/models/product');
 exports.createBill = async (req, res) => {
   try {
     const { userId, paymentMethod } = req.body;
-    console.log('userId:', userId, 'paymentMethod:', paymentMethod); 
+    
+    // Validate inputs
+    if (!userId || !paymentMethod) {
+      return res.status(400).json({ message: 'Thiếu thông tin người dùng hoặc phương thức thanh toán.' });
+    }
+
     const cart = await Cart.findOne({ user: userId, status: 'ChoThanhToan' }).populate('items.product');
-    // console.log('Giỏ hàng:', cart); 
+    
+    // Check if the cart exists and has items
     if (!cart || cart.items.length === 0) {
       return res.status(404).json({ message: 'Giỏ hàng trống hoặc không có sản phẩm nào để thanh toán' });
     }
 
-    const totalAmount = cart.items.reduce((acc, item) => acc + item.totalPrice, 0);
+    // Calculate total amount
+    const totalAmount = cart.items.reduce((acc, item) => acc + (item.totalPrice || 0), 0);
     
     const bill = new Bill({
       user: userId,
       items: cart.items,
       totalAmount,
       paymentMethod,
-      purchaseType : 'Online'
+      purchaseType: 'Online'
     });
+    
     await bill.save();
-
+    
+    // Update cart status
     cart.status = 'Shipped'; 
     await cart.save();
 
+    // Update product quantities
     for (const item of cart.items) {
-      const productLine = item.product.lines[0];
-      const newQuantity = productLine.quantity - item.quantity;
+      const product = await Product.findById(item.product._id); // Fetch product
+      const newQuantity = product.quantity - item.quantity;
   
       if (newQuantity < 0) {
         return res.status(400).json({ message: 'Số lượng sản phẩm trong kho không đủ' });
       }
   
-      productLine.quantity = newQuantity;
-      await item.product.save(); 
+      product.quantity = newQuantity;
+      await product.save(); // Save updated product
     }
   
     res.status(201).json({ message: 'Hóa đơn đã được tạo thành công', bill });
   } catch (error) {
-    console.error('Lỗi :', error); 
+    console.error('Lỗi:', error); 
     res.status(500).json({ message: error.message });
   }
 };
