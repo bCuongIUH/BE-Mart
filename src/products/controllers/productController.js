@@ -2,7 +2,8 @@ const mongoose = require('mongoose');
 const uploadImageToCloudinary = require('../../upload/uploadImage');
 const Category  = require('../models/category');
 const Product  = require('../models/product');
-const Unit = require('../models/unit');
+const Unit = require('../../unit/models/Unit');
+
 
 exports.createProduct = async (req, res) => {
   try {
@@ -151,5 +152,38 @@ exports.nhapHang = async (req, res) => {
   } catch (error) {
       console.error('Lỗi khi nhập hàng:', error);
       return res.status(500).json({ message: 'Lỗi server' });
+  }
+};
+
+// Thêm đơn vị vào sản phẩm
+exports.addUnitToProduct = async (req, res) => {
+  try {
+      const { productId, unitId } = req.body;
+
+      // Tìm sản phẩm theo ID
+      const product = await Product.findById(productId);
+      if (!product) {
+          return res.status(404).json({ message: 'Sản phẩm không tồn tại' });
+      }
+
+      // Tìm đơn vị theo ID
+      const unit = await Unit.findById(unitId);
+      if (!unit) {
+          return res.status(404).json({ message: 'Đơn vị không tồn tại' });
+      }
+
+      // Kiểm tra nếu đơn vị đã tồn tại trong sản phẩm
+      if (product.units.includes(unitId)) {
+          return res.status(400).json({ message: 'Đơn vị đã tồn tại trong sản phẩm này' });
+      }
+
+      // Thêm đơn vị vào sản phẩm
+      product.units.push(unitId);
+      await product.save();
+
+      return res.status(200).json({ message: 'Đơn vị đã được thêm vào sản phẩm', product });
+  } catch (error) {
+      console.error(error);
+      return res.status(500).json({ message: 'Lỗi máy chủ', error });
   }
 };

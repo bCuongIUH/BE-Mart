@@ -1,7 +1,7 @@
 
 const express = require('express');
 const router = express.Router();
-const {  getAllProducts, getProductById, updateProduct, deleteProduct,createProduct,nhapHang} = require('../controllers/productController');
+const {  getAllProducts, getProductById, updateProduct, deleteProduct,createProduct,nhapHang, addUnitToProduct} = require('../controllers/productController');
 const upload = require('../../config/multerConfig');
 const { capnhatGia, capnhatTrangThai, capnhatKhoangGia,updatePriceActive } = require('../controllers/priceController');
 
@@ -22,6 +22,7 @@ router.put('/status/:id', capnhatTrangThai);
 router.put('/price/:id', capnhatGia);
 router.put('/priceRanges/:id', capnhatKhoangGia);
 router.put('/priceRanges/active/:id', updatePriceActive);
+router.post('/add-unit', addUnitToProduct);
 // // Xóa sản phẩm
 router.delete('/:id', deleteProduct);
 module.exports = router;

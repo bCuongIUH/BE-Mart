@@ -39,44 +39,6 @@ exports.getAllWarehouse = async (req, res) => {
         res.status(500).json({ message: 'Lỗi máy chủ', error: error.message });
     }
 };
-// Tạo phiếu nhập hàng
-// exports.createWarehouseEntry = async (req, res) => {
-//     const { supplierId, enteredBy, entryCode,products } = req.body; 
-
-//     try {
-//         // Kiểm tra thông tin nhà cung cấp
-//         const supplier = await Supplier.findById(supplierId);
-//         if (!supplier) {
-//             return res.status(404).json({ message: 'Nhà cung cấp không tồn tại' });
-//         }
-
-    
-//         const user = await User.findById(enteredBy);
-//         if (!user) {
-//             return res.status(404).json({ message: 'Người dùng không tồn tại' });
-//         }
-
-//         if (!entryCode) {
-//             return res.status(400).json({ message: 'Mã phiếu nhập hàng không được để trống.' });
-//         }
-
-//         // Tạo phiếu nhập hàng (header)
-//         const newWarehouseEntry = new WarehouseEntry({
-//             entryCode,   
-//             enteredBy,
-//             supplierId,
-//             products
-//         });
-
-//         // Lưu phiếu nhập hàng vào cơ sở dữ liệu
-//         await newWarehouseEntry.save();
-
-//         return res.status(201).json({ message: 'Phiếu nhập hàng đã được tạo!', warehouseEntry: newWarehouseEntry });
-//     } catch (error) {
-//         console.error('Lỗi khi tạo phiếu nhập hàng:', error);
-//         return res.status(500).json({ message: 'Lỗi server', error: error.message });
-//     }
-// };
 
 
 exports.createWarehouseEntry = async (req, res) => {

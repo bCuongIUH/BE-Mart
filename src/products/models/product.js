@@ -12,8 +12,10 @@ const ProductSchema = new mongoose.Schema({
     currentPrice: { type: Number, default: 0 },
     
     supplier: { type: mongoose.Schema.Types.ObjectId, ref: 'Supplier', required: true },
+    units: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Unit' }]
 
-
+ 
+    
 }, { timestamps: true });
 
 const Product = mongoose.model('Products', ProductSchema);
