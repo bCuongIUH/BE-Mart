@@ -11,8 +11,9 @@ const cartRouter = require('./src/cart/routes/cartRouter');
 const billRouter = require('./src/bill/routes/billRouter');
 const categoryRoutes = require('./src/products/routes/categoryRoutes');
 const unitRoutes = require('./src/products/routes/unitRoutes')
-const promationRouter = require('./src/promotion/router/promotionRouter')
 const priceListRoutes = require('./src/priceList/router/priceRouter');
+const promotionProgramRoutes = require("./src/promotion/router/promotionProgramRoutes");
+const voucherRoutes = require("./src/promotion/router/voucherRoutes");
 dotenv.config();
 const app = express();
 const cron = require('node-cron');
@@ -38,9 +39,9 @@ app.use('/api/cart',cartRouter )
 app.use('/api/bill',billRouter )
 app.use('/api/categories', categoryRoutes);
 app.use('/api/units',unitRoutes)
-app.use('/api/promotions',promationRouter)
 app.use('/api/price-list',priceListRoutes)
-
+app.use("/api/promotion-program", promotionProgramRoutes);
+app.use("/api/voucher", voucherRoutes);
 // Kết nối MongoDB
 mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => {

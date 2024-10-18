@@ -79,14 +79,15 @@ exports.getAllWarehouse = async (req, res) => {
 // };
 
 
-// Nhập kho từ nhà cung cấp
 exports.createWarehouseEntry = async (req, res) => {
     try {
         const { entryCode, supplierId, products, enteredBy } = req.body; 
 
+        // Validate supplier ID
         if (!enteredBy || enteredBy.length !== 24) {
             return res.status(400).json({ message: 'Nhà cung cấp không hợp lệ' });
         }
+        
         const supplier = await Supplier.findById(supplierId);
         if (!supplier) {
             return res.status(400).json({ message: 'Nhà cung cấp không hợp lệ' });
@@ -94,23 +95,32 @@ exports.createWarehouseEntry = async (req, res) => {
 
         let totalAmount = 0;
 
-        
+        // Iterate over each product in the request
         for (const item of products) {
             const product = await Product.findById(item.productId);
             if (!product || product.supplier.toString() !== supplierId) {
                 return res.status(400).json({ message: `Sản phẩm với ID ${item.productId} không thuộc nhà cung cấp này.` });
             }
-            
-            // Tính tổng số tiền
-            totalAmount += item.quantity * item.price;
 
-          
-            product.quantity += item.quantity;
-          
+            // Ensure quantity and price are numbers to avoid concatenation
+            const itemQuantity = Number(item.quantity);
+            const itemPrice = Number(item.price);
+            
+            if (isNaN(itemQuantity) || isNaN(itemPrice)) {
+                return res.status(400).json({ message: 'Số lượng hoặc giá của sản phẩm không hợp lệ.' });
+            }
+
+            // Calculate total amount
+            totalAmount += itemQuantity * itemPrice;
+
+            // Update product quantity (add the quantity to the existing one)
+            product.quantity += itemQuantity;
+
+            // Save the updated product
             await product.save(); 
         }
 
-        // Tạo phiếu nhập kho
+        // Create the warehouse entry
         const newWarehouseEntry = new WarehouseEntry({
             entryCode,
             enteredBy,
@@ -119,6 +129,7 @@ exports.createWarehouseEntry = async (req, res) => {
             products,
         });
 
+        // Save the new warehouse entry
         await newWarehouseEntry.save();
 
         res.status(201).json({ message: 'Nhập kho thành công', warehouseEntry: newWarehouseEntry });

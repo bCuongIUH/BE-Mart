@@ -64,13 +64,16 @@ exports.createDirectPurchaseBill = async (req, res) => {
       status: 'Paid' ,
       purchaseType :'Offline'
     });
+    console.log(bill);
+    
     await bill.save();
     // Giảm số lượng từng sản phẩm trong kho
     for (const item of items) {
-      const product = await Product.findById(item.product).populate('lines');
+      const product = await Product.findById(item.product).populate('');
       if (!product) {
         return res.status(404).json({ message: `Không tìm thấy sản phẩm với ID ${item.product}` });
       }
+
       const productLine = product; 
       const newQuantity = productLine.quantity - item.quantity;
       if (newQuantity < 0) {

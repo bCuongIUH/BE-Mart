@@ -13,6 +13,7 @@ const ProductSchema = new mongoose.Schema({
     
     supplier: { type: mongoose.Schema.Types.ObjectId, ref: 'Supplier', required: true },
 
+
 }, { timestamps: true });
 
 const Product = mongoose.model('Products', ProductSchema);
