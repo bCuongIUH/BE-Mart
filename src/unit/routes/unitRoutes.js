@@ -6,5 +6,5 @@ router.post('/', unitController.createUnit);
 router.post('/unit-lists', unitController.createUnitList);  
 router.post('/unit-lists/add-unit', unitController.addUnitToList); 
 router.post('/convert', unitController.convertUnit);     
-
-module.exports = router; 
+router.put('/conversion-rate', unitController.updateConversionRate); 
+module.exports = router;  

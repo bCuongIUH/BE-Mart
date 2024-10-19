@@ -60,19 +60,22 @@ exports.createBill = async (req, res) => {
 //mua hàng trục tiếp
 exports.createDirectPurchaseBill = async (req, res) => {
   try {
-    const { paymentMethod, phoneNumber, items } = req.body; 
+    const {carid, paymentMethod, phoneNumber, items } = req.body; 
     if (!items || items.length === 0) {
       return res.status(400).json({ message: 'Danh sách sản phẩm không hợp lệ' });
     }
     const totalAmount = items.reduce((acc, item) => acc + (item.currentPrice * item.quantity), 0);
+
+    //
     const bill = new Bill({
       user: null, 
       items,
       totalAmount,
       paymentMethod,
-      phoneNumber, 
+      phoneNumber, //
       status: 'Paid' ,
-      purchaseType :'Offline'
+      purchaseType :'Offline' //
+      // km
     });
     console.log(bill);
     

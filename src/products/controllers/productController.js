@@ -187,3 +187,84 @@ exports.addUnitToProduct = async (req, res) => {
       return res.status(500).json({ message: 'Lỗi máy chủ', error });
   }
 };
+
+
+
+
+
+
+
+
+
+
+// Hàm lấy số lượng sản phẩm theo bảng quy đổi đơn vị
+exports.getConvertedQuantity = async (req, res) => {
+  try {
+      const { productId, toUnitId } = req.body; // Lấy productId và toUnitId từ body
+      console.log('productId:', productId);
+      console.log('toUnitId:', toUnitId);
+
+      // Tìm sản phẩm theo ID
+      const product = await Product.findById(productId).populate('units');
+      if (!product) {
+          return res.status(404).json({ message: 'Sản phẩm không tồn tại' });
+      }
+      console.log('Sản phẩm tìm thấy:', product);
+
+      // Lấy đơn vị hiện tại và số lượng của sản phẩm
+      const currentUnit = product.units;
+      const currentQuantity = product.quantity;
+      console.log('Đơn vị hiện tại:', currentUnit);
+      console.log('Số lượng hiện tại:', currentQuantity);
+
+      // Kiểm tra xem có quy đổi nào từ đơn vị hiện tại sang đơn vị đích không
+      const conversionRate = currentUnit.conversionRates.find(rate => rate.toUnit.toString() === toUnitId);
+      if (!conversionRate) {
+          return res.status(404).json({ message: 'Không tìm thấy quy đổi từ đơn vị này' });
+      }
+
+      // Tính toán số lượng sau quy đổi
+      const convertedQuantity = currentQuantity / conversionRate.factor;
+      console.log('Số lượng sau quy đổi:', convertedQuantity);
+
+      return res.status(200).json({
+          message: 'Quy đổi thành công',
+          convertedQuantity,
+          fromUnit: currentUnit.name,
+          toUnit: toUnitId,
+          conversionFactor: conversionRate.factor,
+      });
+  } catch (error) {
+      console.error(error);
+      return res.status(500).json({ message: 'Lỗi máy chủ', error });
+  }
+};
+
+
+
+exports.addUnitToProduct = async (req, res) => {
+  try {
+      const { productId, unitId } = req.body; // Lấy unitId từ body yêu cầu
+
+      // Tìm sản phẩm theo ID
+      const product = await Product.findById(productId);
+      if (!product) {
+          return res.status(404).json({ message: 'Sản phẩm không tồn tại' });
+      }
+
+      // Kiểm tra nếu đơn vị đã được thêm vào sản phẩm
+      // Thêm kiểm tra để tránh lỗi khi product.units là undefined
+      if (product.units && product.units.toString() === unitId) {
+          return res.status(400).json({ message: 'Đơn vị đã được thêm vào sản phẩm' });
+      }
+
+      // Cập nhật đơn vị cho sản phẩm
+      product.units = unitId; // Gán đơn vị vào sản phẩm
+      await product.save();
+
+      return res.status(200).json({ message: 'Đơn vị đã được thêm vào sản phẩm', product });
+  } catch (error) {
+      console.error(error);
+      return res.status(500).json({ message: 'Lỗi máy chủ', error });
+  }
+};
