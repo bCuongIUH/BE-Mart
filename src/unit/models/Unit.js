@@ -7,7 +7,7 @@ const ConversionRateSchema = new mongoose.Schema({
 
 const UnitSchema = new mongoose.Schema({
     name: { type: String, required: true, unique: true },// thùng
-    baseQuantity: { type: Number, required: true },// 1
+    baseQuantity: { type: Number, required: false, default : 1 },// 1
     conversionRates: [ConversionRateSchema] // Mảng quy đổi
 }, { timestamps: true });
 

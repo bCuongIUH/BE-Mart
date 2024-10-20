@@ -1,7 +1,7 @@
 const Product = require('../../products/models/product');
 const Unit = require('../models/Unit');
 const UnitList = require('../models/UnitList');
-// Lấy danh sách bảng đơn vị tính
+// Lấy danh sách bảng đơn vị tính header
 exports.getAllUnitLists = async (req, res) => {
     try {
         const unitLists = await UnitList.find();
@@ -106,35 +106,136 @@ exports.convertUnit = async (req, res) => {
 
 
 
-// Hàm cập nhật quy đổi giữa các đơn vị
+// // Hàm cập nhật quy đổi giữa các đơn vị
+// exports.updateConversionRate = async (req, res) => {
+//     try {
+//         const { fromUnitId, toUnitId, factor } = req.body;
+
+//         // Tìm đơn vị nguồn
+//         const fromUnit = await Unit.findById(fromUnitId);
+//         if (!fromUnit) {
+//             return res.status(404).json({ message: 'Đơn vị nguồn không tồn tại' });
+//         }
+
+//         // Kiểm tra nếu quy đổi đã tồn tại
+//         const existingRate = fromUnit.conversionRates.find(rate => rate.toUnit.toString() === toUnitId);
+//         if (existingRate) {
+//             // Nếu đã tồn tại, cập nhật giá trị
+//             existingRate.factor = factor;
+//         } else {
+//             // Nếu chưa tồn tại, thêm quy đổi mới
+//             fromUnit.conversionRates.push({ toUnit: toUnitId, factor });
+//         }
+
+//         // Lưu lại thay đổi
+//         await fromUnit.save();
+
+//         return res.status(200).json({
+//             message: 'Cập nhật quy đổi thành công',
+//             fromUnit
+//         });
+//     } catch (error) {
+//         console.error(error);
+//         return res.status(500).json({ message: 'Lỗi máy chủ', error });
+//     }
+// };
+// exports.updateConversionRate = async (req, res) => {
+//     try {
+//         const { unitListId, fromUnitName, toUnitName, factor } = req.body;
+//         console.log("Đầu vào:", { unitListId, fromUnitName, toUnitName, factor });
+        
+//         // Tìm bảng đơn vị tính
+//         const unitList = await UnitList.findById(unitListId).populate('units');
+//         if (!unitList) {
+//             return res.status(404).json({ message: 'Bảng đơn vị tính không tồn tại' });
+//         }
+
+//         // Tìm đơn vị nguồn
+//         let fromUnit = unitList.units.find(unit => unit.name === fromUnitName);
+//         if (!fromUnit) {
+//             fromUnit = new Unit({ name: fromUnitName, conversionRates: [] });
+//             await fromUnit.save();
+//             unitList.units.push(fromUnit);
+//         }
+
+//         // Tìm đơn vị đích
+//         let toUnit = unitList.units.find(unit => unit.name === toUnitName);
+//         if (!toUnit) {
+//             toUnit = new Unit({ name: toUnitName, conversionRates: [] });
+//             await toUnit.save();
+//             unitList.units.push(toUnit);
+//         }
+
+//         // Kiểm tra nếu quy đổi đã tồn tại
+//         const existingRate = fromUnit.conversionRates.find(rate => rate.toUnit.toString() === toUnit._id.toString());
+//         if (existingRate) {
+//             // Nếu đã tồn tại, cập nhật giá trị
+//             existingRate.factor = factor;
+//         } else {
+//             // Nếu chưa tồn tại, thêm quy đổi mới
+//             fromUnit.conversionRates.push({ toUnit: toUnit._id, factor });
+//         }
+
+//         // Lưu lại thay đổi cho unitList và từ đơn vị
+//         await unitList.save();
+//         await fromUnit.save();
+
+//         return res.status(200).json({
+//             message: 'Cập nhật quy đổi thành công',
+//             unitList
+//         });
+//     } catch (error) { 
+//         console.error(error);
+//         return res.status(500).json({ message: 'Lỗi máy chủ', error });
+//     }
+// };
 exports.updateConversionRate = async (req, res) => {
     try {
-        const { fromUnitId, toUnitId, factor } = req.body;
+        const { unitListId, fromUnitName, toUnitName, factor } = req.body;
+        console.log("Đầu vào:", { unitListId, fromUnitName, toUnitName, factor });
+        
+        // Tìm bảng đơn vị tính
+        const unitList = await UnitList.findById(unitListId).populate('units');
+        if (!unitList) {
+            return res.status(404).json({ message: 'Bảng đơn vị tính không tồn tại' });
+        }
 
-        // Tìm đơn vị nguồn
-        const fromUnit = await Unit.findById(fromUnitId);
+        // Tìm đơn vị nguồn, nếu không tồn tại thì tạo mới
+        let fromUnit = unitList.units.find(unit => unit.name === fromUnitName);
         if (!fromUnit) {
-            return res.status(404).json({ message: 'Đơn vị nguồn không tồn tại' });
+            fromUnit = new Unit({ name: fromUnitName, conversionRates: [] });
+            await fromUnit.save(); // Lưu đơn vị mới vào cơ sở dữ liệu
+            unitList.units.push(fromUnit); // Thêm vào bảng đơn vị tính
+            await unitList.save(); // Lưu lại bảng đơn vị tính
+        }
+
+        // Tìm đơn vị đích
+        let toUnit = unitList.units.find(unit => unit.name === toUnitName);
+        if (!toUnit) {
+            toUnit = new Unit({ name: toUnitName, conversionRates: [] });
+            await toUnit.save();
+            unitList.units.push(toUnit);
+            await unitList.save(); // Lưu lại bảng đơn vị tính sau khi thêm đơn vị mới
         }
 
         // Kiểm tra nếu quy đổi đã tồn tại
-        const existingRate = fromUnit.conversionRates.find(rate => rate.toUnit.toString() === toUnitId);
+        const existingRate = fromUnit.conversionRates.find(rate => rate.toUnit.toString() === toUnit._id.toString());
         if (existingRate) {
             // Nếu đã tồn tại, cập nhật giá trị
             existingRate.factor = factor;
         } else {
             // Nếu chưa tồn tại, thêm quy đổi mới
-            fromUnit.conversionRates.push({ toUnit: toUnitId, factor });
+            fromUnit.conversionRates.push({ toUnit: toUnit._id, factor });
         }
 
-        // Lưu lại thay đổi
+        // Lưu lại thay đổi cho từ đơn vị
         await fromUnit.save();
 
         return res.status(200).json({
             message: 'Cập nhật quy đổi thành công',
-            fromUnit
+            unitList
         });
-    } catch (error) {
+    } catch (error) { 
         console.error(error);
         return res.status(500).json({ message: 'Lỗi máy chủ', error });
     }
@@ -279,5 +380,45 @@ exports.addConversionUnitToList = async (req, res) => {
         return res.status(200).json({ message: 'Đơn vị quy đổi đã được thêm thành công' });
     } catch (error) {
         return res.status(500).json({ message: 'Lỗi server', error });
+    }
+};
+
+
+
+exports.getConversionRatesByUnitListId = async (req, res) => {
+    try {
+        const { unitListId } = req.body; 
+        console.log("Lấy danh sách quy đổi cho bảng đơn vị:", unitListId);
+        
+        // Tìm bảng đơn vị tính và populate các trường 'units' và 'toUnit'
+        const unitList = await UnitList.findById(unitListId).populate({
+            path: 'units',
+            populate: {
+                path: 'conversionRates.toUnit',
+                model: 'Unit'
+            }
+        });
+
+        if (!unitList) {
+            console.error('Bảng đơn vị tính không tồn tại:', unitListId);
+            return res.status(404).json({ message: 'Bảng đơn vị tính không tồn tại' });
+        }
+
+        // Lấy danh sách quy đổi từ các đơn vị
+        const conversionRates = unitList.units.flatMap(unit => 
+            unit.conversionRates.map(rate => ({
+                fromUnitName: unit.name,
+                toUnitName: rate.toUnit ? rate.toUnit.name : 'Không xác định', // Kiểm tra toUnit
+                factor: rate.factor
+            }))
+        );
+
+        return res.status(200).json({
+            message: 'Lấy danh sách quy đổi thành công',
+            conversionRates
+        });
+    } catch (error) {
+        console.error('Lỗi trong quá trình lấy danh sách quy đổi:', error);
+        return res.status(500).json({ message: 'Lỗi máy chủ', error });
     }
 };

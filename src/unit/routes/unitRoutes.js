@@ -15,4 +15,6 @@ router.post('/products/get-converted-quantity', unitController.getConvertedQuant
 
 router.post('/getUnit', unitController.getUnitsByUnitListId); 
 router.post('/add-conversion-unit', unitController.addConversionUnitToList); 
+
+router.post('/getUnit/all', unitController.getConversionRatesByUnitListId); 
 module.exports = router;  
