@@ -241,7 +241,6 @@ exports.updateConversionRate = async (req, res) => {
     }
 };
 
-// thêm đơn vị cơn bản vào sp và quy đổi 
 exports.addUnitToProduct = async (req, res) => {
     try {
         const { productId, unitId } = req.body; // Lấy unitId từ body yêu cầu
@@ -271,12 +270,21 @@ exports.addUnitToProduct = async (req, res) => {
         const conversionRates = baseUnit.conversionRates || [];
 
         // Thêm tất cả các đơn vị quy đổi vào sản phẩm
-        conversionRates.forEach(rate => {
-            const unitExists = product.units.some(unit => unit.unit._id.toString() === rate.toUnit.toString());
-            if (!unitExists) {
-                product.units.push({ unit: rate.toUnit, conversionFactor: rate.factor });
+        for (const rate of conversionRates) {
+            const toUnit = await Unit.findById(rate.toUnit);
+            if (toUnit) {
+                // Kiểm tra nếu đơn vị quy đổi đã được thêm vào sản phẩm
+                const unitExists = product.units.some(unit => unit.unit._id.toString() === toUnit._id.toString());
+                if (!unitExists) {
+                    // Thêm đơn vị quy đổi vào sản phẩm
+                    product.units.push({ unit: toUnit._id, conversionFactor: rate.factor });
+
+                    // Cập nhật sản phẩm vào đơn vị quy đổi
+                    toUnit.products.push(product._id);
+                    await toUnit.save(); // Lưu lại sự thay đổi cho đơn vị quy đổi
+                }
             }
-        });
+        }
 
         // Lưu sản phẩm với tất cả các đơn vị
         await product.save();
@@ -385,40 +393,213 @@ exports.addConversionUnitToList = async (req, res) => {
 
 
 
+// exports.getConversionRatesByUnitListId = async (req, res) => {
+
+//     try {
+//         const { unitListId } = req.body; 
+//         console.log("Lấy danh sách quy đổi cho bảng đơn vị:", unitListId);
+        
+//         // Tìm bảng đơn vị tính và populate các trường 'units' và 'toUnit'
+//         const unitList = await UnitList.findById(unitListId).populate({
+//             path: 'units',
+//             populate: {
+//                 path: 'conversionRates.toUnit',
+//                 model: 'Unit'
+//             }
+//         });
+
+//         if (!unitList) {
+//             console.error('Bảng đơn vị tính không tồn tại:', unitListId);
+//             return res.status(404).json({ message: 'Bảng đơn vị tính không tồn tại' });
+//         }
+
+//         // Lấy danh sách quy đổi từ các đơn vị
+//         const conversionRates = unitList.units.flatMap(unit => 
+//             unit.conversionRates.map(rate => ({
+//                 fromUnitName: unit.name,
+//                 toUnitName: rate.toUnit ? rate.toUnit.name : 'Không xác định', // Kiểm tra toUnit
+//                 factor: rate.factor
+//             }))
+//         );
+
+       
+//         // Tìm tất cả sản phẩm áp dụng các đơn vị này
+//         const products = await Product.find({ 'units.unit': { $in: unitList.units.map(unit => unit._id) } })
+//             .populate('units.unit'); // Populate để lấy thông tin đơn vị
+
+//         // Tạo cấu trúc dữ liệu trả về
+//         const response = {
+//             message: 'Lấy danh sách quy đổi thành công',
+//             conversionRates,
+//             products: products.map(product => ({
+//                 productId: product._id,
+//                 productName: product.name,
+//                 units: product.units.map(unit => ({
+//                     unitId: unit.unit._id,
+//                     unitName: unit.unit.name,
+//                     conversionFactor: unit.conversionFactor
+//                 }))
+//             }))
+//         };
+
+//         return res.status(200).json(response);
+//     } catch (error) {
+//         console.error('Lỗi trong quá trình lấy danh sách quy đổi:', error);
+//         return res.status(500).json({ message: 'Lỗi máy chủ', error });
+//     }
+// };
+// exports.getConversionRatesByUnitListId = async (req, res) => {
+//     try {
+//         const { unitListId } = req.body; 
+//         console.log("Lấy danh sách quy đổi cho bảng đơn vị:", unitListId);
+        
+//         // Tìm bảng đơn vị tính và populate các trường 'units' và 'toUnit'
+//         const unitList = await UnitList.findById(unitListId).populate({
+//             path: 'units',
+//             populate: {
+//                 path: 'conversionRates.toUnit',
+//                 model: 'Unit'
+//             }
+//         });
+
+//         if (!unitList) {
+//             console.error('Bảng đơn vị tính không tồn tại:', unitListId);
+//             return res.status(404).json({ message: 'Bảng đơn vị tính không tồn tại' });
+//         }
+
+//         const products = await Product.find({ 'units.unit': { $in: unitList.units.map(unit => unit._id) } })
+//         .populate('units.unit'); // Populate để lấy thông tin đơn vị
+//     console.log('Products:', products); // Thêm dòng này để xem thông tin sản phẩm
+    
+//         // Tạo danh sách quy đổi với sản phẩm tương ứng
+//         const conversionRatesWithProducts = unitList.units.flatMap(unit => 
+//             unit.conversionRates.map(rate => {
+//                 const appliedProducts = products.filter(product =>
+//                     product.units.some(u => u.unit.toString() === unit._id.toString() && u.unit.toString() === rate.toUnit.toString())
+//                 ).map(product => product.name);
+
+//                 return {
+//                     fromUnitName: unit.name,
+//                     toUnitName: rate.toUnit ? rate.toUnit.name : 'Không xác định', // Kiểm tra toUnit
+//                     factor: rate.factor,
+//                     products: appliedProducts
+//                 };
+//             })
+//         );
+
+//         return res.status(200).json({
+//             message: 'Lấy danh sách quy đổi thành công',
+//             conversionRates: conversionRatesWithProducts
+//         });
+//     } catch (error) {
+//         console.error('Lỗi trong quá trình lấy danh sách quy đổi:', error);
+//         return res.status(500).json({ message: 'Lỗi máy chủ', error });
+//     }
+// };
+// exports.getConversionRatesByUnitListId = async (req, res) => {
+//     try {
+//         const { unitListId } = req.body; 
+//         console.log("Lấy danh sách quy đổi cho bảng đơn vị:", unitListId);
+        
+//         // Tìm bảng đơn vị tính và populate các trường 'units' và 'toUnit'
+//         const unitList = await UnitList.findById(unitListId).populate({
+//             path: 'units',
+//             populate: {
+//                 path: 'conversionRates.toUnit',
+//                 model: 'Unit'
+//             }
+//         });
+
+//         if (!unitList) {
+//             console.error('Bảng đơn vị tính không tồn tại:', unitListId);
+//             return res.status(404).json({ message: 'Bảng đơn vị tính không tồn tại' });
+//         }
+
+//         // Tìm tất cả sản phẩm có chứa đơn vị trong bảng đơn vị tính
+//         const products = await Product.find({ 'units.unit': { $in: unitList.units.map(unit => unit._id) } })
+//             .populate('units.unit'); // Populate để lấy thông tin đơn vị
+
+//         console.log('Products:', products); // Thêm dòng này để xem thông tin sản phẩm
+        
+//         // Tạo danh sách quy đổi với sản phẩm tương ứng
+//         const conversionRatesWithProducts = unitList.units.flatMap(unit => 
+//             unit.conversionRates.map(rate => {
+//                 const appliedProducts = products.filter(product =>
+//                     product.units.some(u => 
+//                         u.unit.toString() === unit._id.toString()
+//                     ) && product.units.some(u => 
+//                         u.unit.toString() === rate.toUnit.toString()
+//                     )
+//                 ).map(product => product.name);
+                
+        
+//                 return {
+//                     fromUnitName: unit.name,
+//                     toUnitName: rate.toUnit ? rate.toUnit.name : 'Không xác định', // Kiểm tra toUnit
+//                     factor: rate.factor,
+//                     products: appliedProducts // Danh sách sản phẩm phù hợp
+//                 };
+//             })
+//         );
+//         console.log('Danh sách đơn vị:', unitList);
+// console.log('Danh sách sản phẩm:', products);
+// console.log('Danh sách quy đổi với sản phẩm:', conversionRatesWithProducts);
+
+
+//         return res.status(200).json({
+//             message: 'Lấy danh sách quy đổi thành công',
+//             conversionRates: conversionRatesWithProducts
+//         });
+//     } catch (error) {
+//         console.error('Lỗi trong quá trình lấy danh sách quy đổi:', error);
+//         return res.status(500).json({ message: 'Lỗi máy chủ', error });
+//     }
+// };
+
 exports.getConversionRatesByUnitListId = async (req, res) => {
     try {
-        const { unitListId } = req.body; 
-        console.log("Lấy danh sách quy đổi cho bảng đơn vị:", unitListId);
-        
-        // Tìm bảng đơn vị tính và populate các trường 'units' và 'toUnit'
-        const unitList = await UnitList.findById(unitListId).populate({
-            path: 'units',
-            populate: {
-                path: 'conversionRates.toUnit',
-                model: 'Unit'
-            }
-        });
+        const { unitListId } = req.body; // Lấy unitListId từ tham số URL
+
+        // Tìm bảng đơn vị tính và populate các đơn vị
+        const unitList = await UnitList.findById(unitListId).populate('units');
 
         if (!unitList) {
-            console.error('Bảng đơn vị tính không tồn tại:', unitListId);
             return res.status(404).json({ message: 'Bảng đơn vị tính không tồn tại' });
         }
 
-        // Lấy danh sách quy đổi từ các đơn vị
-        const conversionRates = unitList.units.flatMap(unit => 
-            unit.conversionRates.map(rate => ({
-                fromUnitName: unit.name,
-                toUnitName: rate.toUnit ? rate.toUnit.name : 'Không xác định', // Kiểm tra toUnit
-                factor: rate.factor
-            }))
-        );
+        // Tạo một mảng chứa thông tin quy đổi
+        const conversionRatesWithProducts = [];
+
+        // Lặp qua từng đơn vị trong bảng
+        for (const unit of unitList.units) {
+            // Lặp qua từng tỉ lệ quy đổi trong đơn vị
+            for (const conversionRate of unit.conversionRates) {
+                // Lấy đơn vị quy đổi từ ID
+                const toUnit = await Unit.findById(conversionRate.toUnit).populate('products');
+
+                // Lấy tất cả sản phẩm liên quan đến đơn vị này
+                const applicableProducts = toUnit ? toUnit.products : [];
+
+                // Thêm thông tin vào mảng kết quả
+                conversionRatesWithProducts.push({
+                    fromUnitName: unit.name,
+                    toUnitName: toUnit ? toUnit.name : null,
+                    factor: conversionRate.factor,
+                    products: applicableProducts.map(product => ({
+                        _id: product._id,
+                        name: product.name,
+                        code: product.code
+                    }))
+                });
+            }
+        }
 
         return res.status(200).json({
             message: 'Lấy danh sách quy đổi thành công',
-            conversionRates
+            conversionRates: conversionRatesWithProducts
         });
     } catch (error) {
-        console.error('Lỗi trong quá trình lấy danh sách quy đổi:', error);
+        console.error(error);
         return res.status(500).json({ message: 'Lỗi máy chủ', error });
     }
 };

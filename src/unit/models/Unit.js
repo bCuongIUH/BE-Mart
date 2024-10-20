@@ -8,7 +8,8 @@ const ConversionRateSchema = new mongoose.Schema({
 const UnitSchema = new mongoose.Schema({
     name: { type: String, required: true, unique: true },// thùng
     baseQuantity: { type: Number, required: false, default : 1 },// 1
-    conversionRates: [ConversionRateSchema] // Mảng quy đổi
+    conversionRates: [ConversionRateSchema], // Mảng quy đổi
+    products: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Products' }]
 }, { timestamps: true });
 
 const Unit = mongoose.model('Unit', UnitSchema);
