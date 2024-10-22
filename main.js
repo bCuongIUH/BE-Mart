@@ -41,11 +41,11 @@ app.use('/api/warehouses', warehouseRouter);
 app.use('/api/cart',cartRouter )
 app.use('/api/bill',billRouter )
 app.use('/api/categories', categoryRoutes);
-app.use('/api/units',unitRoutes)
+app.use('/api/unitsDemo',unitRoutes)
 app.use('/api/price-list',priceListRoutes)
 app.use("/api/promotion-program", promotionProgramRoutes);
 app.use("/api/voucher", voucherRoutes);
-app.use("/api/Units", unitsRoutes);
+app.use("/api/units", unitsRoutes);
 app.use("/api/units/crud", unitsCRUDRoutes);
 // Kết nối MongoDB
 mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })

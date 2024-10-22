@@ -6,79 +6,39 @@ const Unit = require('../../unit/models/Unit');
 const UnitLine = require('../../units/models/UnitLine');
 
 
-exports.createProduct = async (req, res) => {
-
-  try {
-     const { code, barcode, name, description, categoryId, lines, priceLists, supplierId, unitLineId } = req.body; 
-    const category = await Category.findById(categoryId);
-    if (!category) {
-      return res.status(400).json({ message: 'Danh mục không hợp lệ' });
-    }
-
-    if (!req.file) {
-      return res.status(400).json({ message: 'Cần upload ảnh cho sản phẩm' });
-    }
-
-    const imageUrl = await uploadImageToCloudinary(req.file.path, 'product_images');
-
-
-       const unitLine = await UnitLine.findById(unitLineId).populate('details');
-       if (!unitLine) {
-         return res.status(400).json({ message: 'Dòng đơn vị không hợp lệ' });
-       }
-
-    const newProduct = new Product({
-      code,
-      barcode,
-      name,
-      description: description || 'Mô tả mặc định',
-      image: imageUrl,
-      category: categoryId,
-      supplier: supplierId,
-      price: 0,
-      lines: lines || [],
-      priceLists: priceLists || [],
-      units: [{ unitLine: unitLineId, details: unitLine.details }]
-    });
-
-    await newProduct.save();
-
-    res.status(201).json({ message: 'Thêm sản phẩm thành công', product: newProduct });
-  } catch (error) {
-    console.error('Lỗi khi thêm sản phẩm:', error);
-    res.status(500).json({ message: 'Lỗi máy chủ', error: error.message });
-  }
-};
-
-
-
-
 // exports.createProduct = async (req, res) => {
+
 //   try {
-//     const { code, barcode, name, description, categoryId, lines, priceLists, supplierId, unitLineId } = req.body; // Đảm bảo đã lấy supplierId từ req.body
+//      const { code, barcode, name, description, categoryId, lines, priceLists, supplierId, unitLineId } = req.body; 
 //     const category = await Category.findById(categoryId);
-    
 //     if (!category) {
 //       return res.status(400).json({ message: 'Danh mục không hợp lệ' });
 //     }
 
-//     // Tìm kiếm dòng đơn vị
-//     const unitLine = await UnitLine.findById(unitLineId).populate('details'); // Populate chi tiết từ UnitDetail
-//     if (!unitLine) {
-//       return res.status(400).json({ message: 'Dòng đơn vị không hợp lệ' });
+//     if (!req.file) {
+//       return res.status(400).json({ message: 'Cần upload ảnh cho sản phẩm' });
 //     }
+
+//     const imageUrl = await uploadImageToCloudinary(req.file.path, 'product_images');
+
+
+//        const unitLine = await UnitLine.findById(unitLineId).populate('details');
+//        if (!unitLine) {
+//          return res.status(400).json({ message: 'Dòng đơn vị không hợp lệ' });
+//        }
 
 //     const newProduct = new Product({
 //       code,
 //       barcode,
 //       name,
 //       description: description || 'Mô tả mặc định',
+//       image: imageUrl,
 //       category: categoryId,
-//       supplier: supplierId, // Thêm trường nhà cung cấp
+//       supplier: supplierId,
 //       price: 0,
 //       lines: lines || [],
 //       priceLists: priceLists || [],
-//       units: [{ unitLine: unitLineId, details: unitLine.details }] // Thêm details vào units
+//       units: [{ unitLine: unitLineId, details: unitLine.details }]
 //     });
 
 //     await newProduct.save();
@@ -89,6 +49,46 @@ exports.createProduct = async (req, res) => {
 //     res.status(500).json({ message: 'Lỗi máy chủ', error: error.message });
 //   }
 // };
+
+
+
+
+exports.createProduct = async (req, res) => {
+  try {
+    const { code, barcode, name, description, categoryId, lines, priceLists, supplierId, unitLineId } = req.body; // Đảm bảo đã lấy supplierId từ req.body
+    const category = await Category.findById(categoryId);
+    
+    if (!category) {
+      return res.status(400).json({ message: 'Danh mục không hợp lệ' });
+    }
+
+    // Tìm kiếm dòng đơn vị
+    const unitLine = await UnitLine.findById(unitLineId).populate('details'); // Populate chi tiết từ UnitDetail
+    if (!unitLine) {
+      return res.status(400).json({ message: 'Dòng đơn vị không hợp lệ' });
+    }
+
+    const newProduct = new Product({
+      code,
+      barcode,
+      name,
+      description: description || 'Mô tả mặc định',
+      category: categoryId,
+      supplier: supplierId, // Thêm trường nhà cung cấp
+      price: 0,
+      lines: lines || [],
+      priceLists: priceLists || [],
+      units: [{ unitLine: unitLineId, details: unitLine.details }] // Thêm details vào units
+    });
+
+    await newProduct.save();
+
+    res.status(201).json({ message: 'Thêm sản phẩm thành công', product: newProduct });
+  } catch (error) {
+    console.error('Lỗi khi thêm sản phẩm:', error);
+    res.status(500).json({ message: 'Lỗi máy chủ', error: error.message });
+  }
+};
 
 //xóa sp
 exports.deleteProduct = async (req, res) => {

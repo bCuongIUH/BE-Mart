@@ -25,6 +25,16 @@ exports.getUnitLineById = async (req, res) => {
     }
 };
 
+// Lấy tất cả các dòng đơn vị theo ID tiêu đề
+exports.getUnitLinesByHeaderId = async (req, res) => {
+    try {
+        const lines = await UnitLine.find({ header: req.params.headerId }).populate('header');
+        res.status(200).json(lines);
+    } catch (error) {
+        console.error('Lỗi khi lấy các dòng đơn vị:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ', error: error.message });
+    }
+};
 // Cập nhật thông tin một UnitLine
 exports.updateUnitLine = async (req, res) => {
     try {
