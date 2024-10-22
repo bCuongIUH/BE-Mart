@@ -1,5 +1,5 @@
 const express = require('express');
-const { createPriceList, getAllPriceLists, getPriceListById, updatePriceList, deletePriceList, addPricesToPriceList, activatePriceList, deactivatePriceList } = require('../controller/priceController');
+const { createPriceList, getAllPriceLists, getPriceListById, updatePriceList, deletePriceList, addPricesToPriceList, activatePriceList, deactivatePriceList, updateProductPricesByUnitDetails } = require('../controller/priceController');
 const router = express.Router();
 // const priceListController = require('../controllers/priceListController');
 
@@ -15,6 +15,7 @@ router.get('/:id', getPriceListById);
 // Update a Price List
 router.put('/:id', updatePriceList);
 router.post('/addprice/', addPricesToPriceList);
+router.post('/addprice/demo', updateProductPricesByUnitDetails);
 // Delete a Price List
 router.delete('/:id', deletePriceList);
 

@@ -297,3 +297,51 @@ const updateProductPrices = async (products) => {
 //       console.error('Lỗi khi cập nhật giá qua cron job:', error);
 //   }
 // };
+exports.updateProductPricesByUnitDetails = async (req, res) => {
+  const { priceListId, productId, units } = req.body;
+
+  try {
+      // Kiểm tra tính hợp lệ của ID bảng giá và sản phẩm
+      if (!mongoose.Types.ObjectId.isValid(priceListId) || !mongoose.Types.ObjectId.isValid(productId)) {
+          return res.status(400).json({ success: false, message: 'ID bảng giá hoặc sản phẩm không hợp lệ.' });
+      }
+
+      // Tìm bảng giá
+      const priceList = await PriceList.findById(priceListId);
+      if (!priceList || !priceList.isActive) {
+          return res.status(404).json({ success: false, message: 'Bảng giá không tồn tại hoặc không hoạt động.' });
+      }
+
+      // Tìm sản phẩm
+      const product = await Product.findById(productId);
+      if (!product) {
+          return res.status(404).json({ success: false, message: 'Sản phẩm không tồn tại.' });
+      }
+
+      // Cập nhật giá cho từng chi tiết đơn vị
+      for (const unit of units) {
+          const { unitId, price } = unit;
+
+          // Tìm kiếm và cập nhật giá cho chi tiết đơn vị
+          const unitIndex = product.units.findIndex(u => u.details.some(detail => detail.unitId.toString() === unitId));
+          if (unitIndex !== -1) {
+              const detailIndex = product.units[unitIndex].details.findIndex(detail => detail.unitId.toString() === unitId);
+              if (detailIndex !== -1) {
+                  product.units[unitIndex].details[detailIndex].price = price; // Cập nhật giá
+              } else {
+                  return res.status(404).json({ success: false, message: `Không tìm thấy chi tiết đơn vị với ID ${unitId}.` });
+              }
+          } else {
+              return res.status(404).json({ success: false, message: `Không tìm thấy đơn vị với ID ${unitId}.` });
+          }
+      }
+
+      // Lưu lại sản phẩm
+      await product.save();
+
+      return res.status(200).json({ success: true, message: 'Giá sản phẩm đã được thêm/cập nhật thành công!', product });
+  } catch (error) {
+      console.error('Lỗi khi thêm/cập nhật giá vào sản phẩm:', error);
+      return res.status(500).json({ success: false, message: 'Có lỗi xảy ra khi thêm/cập nhật giá vào sản phẩm.', error: error.message });
+  }
+};
