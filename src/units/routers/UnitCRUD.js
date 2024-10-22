@@ -22,7 +22,6 @@ router.delete('/lines/:id', unitControllerL.deleteUnitLine);
 // router.post('/details', unitController.createUnitDetail);
 router.get('/unit-details', unitControllerD.getAllUnitDetails);
 router.get('/details/:id', unitControllerD.getUnitDetailById);
-
 router.get('/lines/:lineId/details', unitControllerD.getDetailsByLineId);
 router.put('/details/:id', unitControllerD.updateUnitDetail);
 router.delete('/details/:id', unitControllerD.deleteUnitDetail);

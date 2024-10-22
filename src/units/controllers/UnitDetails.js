@@ -26,28 +26,6 @@ exports.getUnitDetailById = async (req, res) => {
     }
 };
 
-
-exports.getDetailsByLineId = async (req, res) => {
-    const { lineId } = req.params;
-
-    try {
-        // Kiểm tra nếu unitLine tồn tại
-        const unitLine = await UnitLine.findById(lineId);
-        if (!unitLine) {
-            return res.status(404).json({ message: 'Không tìm thấy unitLine với ID này' });
-        }
-
-        // Lấy chi tiết theo lineId
-        const details = await UnitDetail.find({ unitLine: lineId });
-        if (!details.length) {
-            return res.status(404).json({ message: 'Không tìm thấy chi tiết cho unitLine này' });
-        }
-        res.status(200).json(details);
-    } catch (error) {
-        console.error('Lỗi khi lấy chi tiết:', error);
-        res.status(500).json({ message: 'Lỗi máy chủ', error: error.message });
-    }
-};
 // Cập nhật thông tin một UnitDetail
 exports.updateUnitDetail = async (req, res) => {
     try {
