@@ -1,9 +1,21 @@
 const UnitLine = require("../models/UnitLine");
 
 // Lấy danh sách tất cả UnitLine
+// exports.getAllUnitLines = async (req, res) => {
+//     try {
+//         const lines = await UnitLine.find().populate('header');
+//         res.status(200).json(lines);
+//     } catch (error) {
+//         console.error('Lỗi khi lấy danh sách dòng đơn vị:', error);
+//         res.status(500).json({ message: 'Lỗi máy chủ', error: error.message });
+//     }
+// };
 exports.getAllUnitLines = async (req, res) => {
     try {
-        const lines = await UnitLine.find().populate('header');
+        const lines = await UnitLine.find()
+            .populate('header') // Lấy thông tin từ UnitHeader
+            .populate('details'); // Lấy thông tin từ UnitDetail
+
         res.status(200).json(lines);
     } catch (error) {
         console.error('Lỗi khi lấy danh sách dòng đơn vị:', error);

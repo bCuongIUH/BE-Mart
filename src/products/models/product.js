@@ -5,7 +5,7 @@ const ProductSchema = new mongoose.Schema({
     barcode: { type: String, unique: true },
     name: { type: String, required: true , unique : true},
     description: { type: String, required: true },
-    // image: { type: String, required: true },
+    image: { type: String, required: true },
     category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', required: true },
     quantity: { type: Number, default: 0 },
     isAvailable: { type: Boolean, default: false },

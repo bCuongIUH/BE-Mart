@@ -1,4 +1,5 @@
 const UnitDetail = require("../models/UnitDetail");
+const UnitLine = require("../models/UnitLine");
 
 // Lấy danh sách tất cả UnitDetail
 exports.getAllUnitDetails = async (req, res) => {
@@ -24,20 +25,20 @@ exports.getAllUnitDetails = async (req, res) => {
 //         res.status(500).json({ message: 'Lỗi máy chủ', error: error.message });
 //     }
 // };
-exports.getDetailsByLineId = async (req, res) => {
-    const { lineId } = req.params;
+// exports.getDetailsByLineId = async (req, res) => {
+//     const { lineId } = req.params;
 
-    try {
-        const details = await UnitDetail.find({ lineId }); // Đảm bảo đây là đúng collection và trường
-        if (!details.length) {
-            return res.status(404).json({ message: 'Không tìm thấy chi tiết cho lineId này' });
-        }
-        res.status(200).json(details);
-    } catch (error) {
-        console.error('Lỗi khi lấy chi tiết:', error);
-        res.status(500).json({ message: 'Lỗi máy chủ', error: error.message });
-    }
-};
+//     try {
+//         const details = await UnitDetail.find({ lineId }); // Đảm bảo đây là đúng collection và trường
+//         if (!details.length) {
+//             return res.status(404).json({ message: 'Không tìm thấy chi tiết cho lineId này' });
+//         }
+//         res.status(200).json(details);
+//     } catch (error) {
+//         console.error('Lỗi khi lấy chi tiết:', error);
+//         res.status(500).json({ message: 'Lỗi máy chủ', error: error.message });
+//     }
+// };
 //
 exports.getDetailsByLineId = async (req, res) => {
     try {
@@ -81,13 +82,24 @@ exports.updateUnitDetail = async (req, res) => {
     }
 };
 
+
 // Xóa một UnitDetail
 exports.deleteUnitDetail = async (req, res) => {
     try {
-        const deletedDetail = await UnitDetail.findByIdAndDelete(req.params.id);
+        const detailId = req.params.id.trim(); // Loại bỏ các ký tự thừa
+
+        // Tìm chi tiết đơn vị để lấy unitLine
+        const deletedDetail = await UnitDetail.findByIdAndDelete(detailId);
+        
         if (!deletedDetail) {
             return res.status(404).json({ message: 'Chi tiết đơn vị không tìm thấy' });
         }
+
+        // Cập nhật UnitLine để loại bỏ ID của detail
+        await UnitLine.findByIdAndUpdate(deletedDetail.unitLine, {
+            $pull: { details: detailId }
+        });
+
         res.status(200).json({ message: 'Xóa chi tiết đơn vị thành công' });
     } catch (error) {
         console.error('Lỗi khi xóa chi tiết đơn vị:', error);
