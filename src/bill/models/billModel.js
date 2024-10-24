@@ -24,6 +24,8 @@ const billSchema = new mongoose.Schema({
         type: Number, 
         required: false 
       },
+
+      createBy: { type: String, required: false },
     },
   ],
   totalAmount: { 
@@ -52,7 +54,8 @@ const billSchema = new mongoose.Schema({
     type: String,
     enum: ['Online', 'Offline'],  
     required: true 
-  }
+  },
+ 
 });
 
 module.exports = mongoose.model('Bill', billSchema);

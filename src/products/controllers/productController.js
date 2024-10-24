@@ -153,22 +153,22 @@ exports.getAllProducts = async (req, res) => {
     res.status(500).json({ message: 'Lỗi khi lấy danh sách sản phẩm', error });
   }
 };
-// exports.getAllProducts = async (req, res) => {
-//   try {
-//     const products = await Product.find()
-//       .populate("category", "name _id") 
-//       .populate("supplier", "name _id") 
-//       .populate("units.unitLine", "name _id") 
-//       .populate({
-//         path: "units.details", 
-//         select: "name value", 
-//       });
+exports.getAllProductsPOP = async (req, res) => {
+  try {
+    const products = await Product.find()
+      .populate("category", "name _id") 
+      .populate("supplier", "name _id") 
+      .populate("units.unitLine", "name _id") 
+      .populate({
+        path: "units.details", 
+        select: "name value", 
+      });
 
-//     res.status(200).json(products);
-//   } catch (error) {
-//     res.status(500).json({ message: "Lỗi khi lấy danh sách sản phẩm", error });
-//   }
-// };
+    res.status(200).json(products);
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi khi lấy danh sách sản phẩm", error });
+  }
+};
 // Lấy sản phẩm theo ID
 exports.getProductById = async (req, res) => {
   try {

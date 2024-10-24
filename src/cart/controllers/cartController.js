@@ -7,6 +7,7 @@ exports.addToCart = async (req, res) => {
   try {
     const { userId, productId, quantity, currentPrice, unit } = req.body;
 
+
     if (!userId) {
       return res.status(400).json({ message: "User ID không có" });
     }
@@ -30,7 +31,7 @@ exports.addToCart = async (req, res) => {
             quantity,
             currentPrice,
             totalPrice,
-            unit: unit || null, // Lưu unit nếu có, ngược lại lưu null
+            unit: unit || null, 
           },
         ],
       });
@@ -62,7 +63,6 @@ exports.addToCart = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
 //
 exports.addToCartOffline = async (req, res) => {
   try {

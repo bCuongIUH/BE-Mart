@@ -58,90 +58,42 @@ exports.createBill = async (req, res) => {
 };
 
 // //mua hàng trục tiếp
-// exports.createDirectPurchaseBill = async (req, res) => {
-//   try {
-//     const {carid, paymentMethod, phoneNumber, items } = req.body; 
-//     if (!items || items.length === 0) {
-//       return res.status(400).json({ message: 'Danh sách sản phẩm không hợp lệ' });
-//     }
-//     const totalAmount = items.reduce((acc, item) => acc + (item.currentPrice * item.quantity), 0);
-
-//     //
-//     const bill = new Bill({
-//       user: null, 
-//       items,
-//       totalAmount,
-//       paymentMethod,
-//       phoneNumber, //
-//       status: 'Paid' ,
-//       purchaseType :'Offline' //
-//       // km
-//     });
-//     console.log(bill);
-    
-//     await bill.save();
-//     // Giảm số lượng từng sản phẩm trong kho
-//     for (const item of items) {
-//       const product = await Product.findById(item.product).populate('');
-//       if (!product) {
-//         return res.status(404).json({ message: `Không tìm thấy sản phẩm với ID ${item.product}` });
-//       }
-
-//       const productLine = product; 
-//       const newQuantity = productLine.quantity - item.quantity;
-//       if (newQuantity < 0) {
-//         return res.status(400).json({ message: `Số lượng sản phẩm ${product.name} trong kho không đủ` });
-//       }
-//       productLine.quantity = newQuantity; 
-//       await product.save(); 
-//     }
-
-//     res.status(201).json({ message: 'Hóa đơn đã được tạo thành công', bill });
-//   } catch (error) {
-//     res.status(500).json({ message: error.message });
-//   }
-// };
 exports.createDirectPurchaseBill = async (req, res) => {
   try {
-    const { carid, paymentMethod, phoneNumber, items } = req.body; 
+    const {carid, paymentMethod, phoneNumber, items , createBy } = req.body; 
     if (!items || items.length === 0) {
       return res.status(400).json({ message: 'Danh sách sản phẩm không hợp lệ' });
     }
-
     const totalAmount = items.reduce((acc, item) => acc + (item.currentPrice * item.quantity), 0);
 
+    //
     const bill = new Bill({
       user: null, 
       items,
       totalAmount,
       paymentMethod,
-      phoneNumber,
-      status: 'Paid',
-      purchaseType: 'Offline'
+      phoneNumber, //
+      status: 'Paid' ,
+      purchaseType :'Offline',
+      createBy
+      // km
     });
-
     console.log(bill);
     
     await bill.save();
-
     // Giảm số lượng từng sản phẩm trong kho
     for (const item of items) {
-      const product = await Product.findById(item.product).populate('units.details');
+      const product = await Product.findById(item.product).populate('');
       if (!product) {
         return res.status(404).json({ message: `Không tìm thấy sản phẩm với ID ${item.product}` });
       }
 
-      const unitDetail = product.units[0].details.find(detail => detail._id.equals(item.unitDetailId));
-      if (!unitDetail) {
-        return res.status(400).json({ message: `Không tìm thấy đơn vị chi tiết cho sản phẩm ${product.name}` });
-      }
-
-      const newQuantity = product.quantity - item.quantity;
+      const productLine = product; 
+      const newQuantity = productLine.quantity - item.quantity;
       if (newQuantity < 0) {
         return res.status(400).json({ message: `Số lượng sản phẩm ${product.name} trong kho không đủ` });
       }
-      
-      product.quantity = newQuantity; 
+      productLine.quantity = newQuantity; 
       await product.save(); 
     }
 
@@ -150,6 +102,58 @@ exports.createDirectPurchaseBill = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+
+
+// exports.createDirectPurchaseBill = async (req, res) => {
+//   try {
+//     const { carid, paymentMethod, phoneNumber, items } = req.body; 
+//     if (!items || items.length === 0) {
+//       return res.status(400).json({ message: 'Danh sách sản phẩm không hợp lệ' });
+//     }
+
+//     const totalAmount = items.reduce((acc, item) => acc + (item.currentPrice * item.quantity), 0);
+
+//     const bill = new Bill({
+//       user: null, 
+//       items,
+//       totalAmount,
+//       paymentMethod,
+//       phoneNumber,
+//       status: 'Paid',
+//       purchaseType: 'Offline'
+//     });
+
+//     console.log(bill);
+    
+//     await bill.save();
+
+//     // Giảm số lượng từng sản phẩm trong kho
+//     for (const item of items) {
+//       const product = await Product.findById(item.product).populate('units.details');
+//       if (!product) {
+//         return res.status(404).json({ message: `Không tìm thấy sản phẩm với ID ${item.product}` });
+//       }
+
+//       const unitDetail = product.units[0].details.find(detail => detail._id.equals(item.unitDetailId));
+//       if (!unitDetail) {
+//         return res.status(400).json({ message: `Không tìm thấy đơn vị chi tiết cho sản phẩm ${product.name}` });
+//       }
+
+//       const newQuantity = product.quantity - item.quantity;
+//       if (newQuantity < 0) {
+//         return res.status(400).json({ message: `Số lượng sản phẩm ${product.name} trong kho không đủ` });
+//       }
+      
+//       product.quantity = newQuantity; 
+//       await product.save(); 
+//     }
+
+//     res.status(201).json({ message: 'Hóa đơn đã được tạo thành công', bill });
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// };
 
 // Lấy danh sách hóa đơn của người dùng
 exports.getBillsByUser = async (req, res) => {
