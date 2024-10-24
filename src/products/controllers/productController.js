@@ -153,6 +153,7 @@ exports.getAllProducts = async (req, res) => {
     res.status(500).json({ message: 'Lỗi khi lấy danh sách sản phẩm', error });
   }
 };
+
 exports.getAllProductsPOP = async (req, res) => {
   try {
     const products = await Product.find()

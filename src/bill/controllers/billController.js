@@ -7,55 +7,68 @@ const Product = require('../../products/models/product');
 exports.createBill = async (req, res) => {
   try {
     const { userId, paymentMethod } = req.body;
-    
+
     // Validate inputs
     if (!userId || !paymentMethod) {
-      return res.status(400).json({ message: 'Thiếu thông tin người dùng hoặc phương thức thanh toán.' });
+      return res.status(400).json({
+        message: "Thiếu thông tin người dùng hoặc phương thức thanh toán.",
+      });
     }
 
-    const cart = await Cart.findOne({ user: userId, status: 'ChoThanhToan' }).populate('items.product');
-    
+    const cart = await Cart.findOne({
+      user: userId,
+      status: "ChoThanhToan",
+    }).populate("items.product");
+
     // Check if the cart exists and has items
     if (!cart || cart.items.length === 0) {
-      return res.status(404).json({ message: 'Giỏ hàng trống hoặc không có sản phẩm nào để thanh toán' });
+      return res.status(404).json({
+        message: "Giỏ hàng trống hoặc không có sản phẩm nào để thanh toán",
+      });
     }
 
     // Calculate total amount
-    const totalAmount = cart.items.reduce((acc, item) => acc + (item.totalPrice || 0), 0);
-    
+    const totalAmount = cart.items.reduce(
+      (acc, item) => acc + (item.totalPrice || 0),
+      0
+    );
+
     const bill = new Bill({
       user: userId,
       items: cart.items,
       totalAmount,
       paymentMethod,
-      purchaseType: 'Online'
+      purchaseType: "Online",
     });
-    
+
     await bill.save();
-    
+
     // Update cart status
-    cart.status = 'Shipped'; 
+    cart.status = "Shipped";
     await cart.save();
 
     // Update product quantities
     for (const item of cart.items) {
       const product = await Product.findById(item.product._id); // Fetch product
-      const newQuantity = product.quantity - item.quantity;
-  
+      const newQuantity = product.quantity - item.quantity * item.unitValue;
+
       if (newQuantity < 0) {
-        return res.status(400).json({ message: 'Số lượng sản phẩm trong kho không đủ' });
+        return res
+          .status(400)
+          .json({ message: "Số lượng sản phẩm trong kho không đủ" });
       }
-  
+
       product.quantity = newQuantity;
       await product.save(); // Save updated product
     }
-  
-    res.status(201).json({ message: 'Hóa đơn đã được tạo thành công', bill });
+
+    res.status(201).json({ message: "Hóa đơn đã được tạo thành công", bill });
   } catch (error) {
-    console.error('Lỗi:', error); 
+    console.error("Lỗi:", error);
     res.status(500).json({ message: error.message });
   }
 };
+
 
 // //mua hàng trục tiếp
 exports.createDirectPurchaseBill = async (req, res) => {

@@ -9,7 +9,7 @@ const { capnhatGia, capnhatTrangThai, capnhatKhoangGia,updatePriceActive } = req
 router.post('/', upload.single('image'), createProduct);
 // // Lấy tất cả sản phẩm
 router.get('/', getAllProducts);
-router.get('/POP', getAllProductsPOP);
+router.get('/pop', getAllProductsPOP);
 
 // // Lấy sản phẩm theo ID
 router.get('/product/:id', getProductById);

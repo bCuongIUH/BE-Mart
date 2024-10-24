@@ -5,8 +5,8 @@ const Product = require("../../products/models/product");
 // Thêm sản phẩm vào giỏ hàng
 exports.addToCart = async (req, res) => {
   try {
-    const { userId, productId, quantity, currentPrice, unit } = req.body;
-
+    const { userId, productId, quantity, currentPrice, unit, unitValue } =
+      req.body;
 
     if (!userId) {
       return res.status(400).json({ message: "User ID không có" });
@@ -31,7 +31,8 @@ exports.addToCart = async (req, res) => {
             quantity,
             currentPrice,
             totalPrice,
-            unit: unit || null, 
+            unit: unit || null, // Lưu unit nếu có, ngược lại lưu null
+            unitValue: unitValue || null, // Lưu unitValue nếu có, ngược lại lưu null
           },
         ],
       });
@@ -52,6 +53,7 @@ exports.addToCart = async (req, res) => {
           currentPrice,
           totalPrice,
           unit: unit || null, // Lưu unit nếu có, ngược lại lưu null
+          unitValue: unitValue || null, // Lưu unitValue nếu có, ngược lại lưu null
         });
       }
     }
@@ -63,7 +65,6 @@ exports.addToCart = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-//
 exports.addToCartOffline = async (req, res) => {
   try {
     const { productId, quantity } = req.body;

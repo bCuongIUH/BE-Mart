@@ -24,6 +24,11 @@ const CartItemSchema = new mongoose.Schema({
     type: String,
     required: false,
   },
+  unitValue: {
+    type: Number,
+    required: false,
+  },
+
 });
 
 const CartSchema = new mongoose.Schema({
@@ -49,6 +54,7 @@ const CartSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
   },
+  
 });
 
 // Tự động cập nhật thời gian khi giỏ hàng được sửa đổi
