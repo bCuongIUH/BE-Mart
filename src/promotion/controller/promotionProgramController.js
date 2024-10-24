@@ -25,6 +25,26 @@ exports.createPromotionProgram = async (req, res) => {
     });
   }
 };
+//lấy chương trình đg hoạt động
+exports.getActivePromotionPrograms = async (req, res) => {
+  try {
+    const today = new Date();
+    
+    // Lấy danh sách chương trình khuyến mãi đang hoạt động
+    const activePromotions = await PromotionProgram.find({
+      isActive: true,
+      startDate: { $lte: today },
+      endDate: { $gte: today },
+    });
+
+    res.status(200).json(activePromotions);
+  } catch (error) {
+    res.status(500).json({
+      error: "Có lỗi xảy ra khi lấy danh sách chương trình khuyến mãi đang hoạt động",
+      details: error.message,
+    });
+  }
+};
 
 // Sửa chương trình khuyến mãi
 exports.updatePromotionProgram = async (req, res) => {

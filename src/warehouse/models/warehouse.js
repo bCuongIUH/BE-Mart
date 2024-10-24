@@ -10,7 +10,7 @@ const WarehouseEntrySchema = new mongoose.Schema({
         productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
         quantity: { type: Number, required: true },
         price: { type: Number, required: true },
-        unitId: { type: mongoose.Schema.Types.ObjectId, ref: 'Unit', required: true } 
+        // unitId: { type: mongoose.Schema.Types.ObjectId, ref: 'Unit', required: true } 
     }]
 }, { timestamps: true });
 

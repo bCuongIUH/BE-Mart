@@ -3,10 +3,7 @@ const router = express.Router();
 const voucherController = require("../controller/voucherController");
 
 // Lấy danh sách voucher theo chương trình khuyến mãi
-router.get(
-  "/promotion/:promotionProgramId",
-  voucherController.getVoucherByPromotionProgramId
-);
+router.get("/promotion/:promotionProgramId", voucherController.getVoucherByPromotionProgramId);
 
 // Tạo mới voucher
 router.post("/", voucherController.createVoucher);
