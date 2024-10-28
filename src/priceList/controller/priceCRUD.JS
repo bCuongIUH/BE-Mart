@@ -67,10 +67,13 @@ exports.deletePriceList = async (req, res) => {
         if (priceList.isActive) {
             return res.status(400).json({ success: false, message: 'Không thể xóa bảng giá đang hoạt động.' });
         }
-        await PriceList.findByIdAndDelete(id);
-        res.status(200).json({ success: true, message: 'Bảng giá đã được xóa thành công.' });
+        
+        priceList.isDeleted = true;
+        await priceList.save();
+
+        res.status(200).json({ success: true, message: 'Bảng giá đã được xóa (soft delete) thành công.' });
     } catch (error) {
-        console.error("Error deleting price list:", error);
+        console.error("Error soft deleting price list:", error);
         res.status(500).json({ success: false, message: 'Không thể xóa bảng giá', error: error.message });
     }
 };

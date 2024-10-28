@@ -19,15 +19,11 @@ const CartItemSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
-  // Thêm trường unit
-  unit: {
+  unit: { 
     type: String,
-    required: false,
+    required: true,
   },
-  unitValue: {
-    type: Number,
-    required: false,
-  },
+
 
 });
 

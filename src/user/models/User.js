@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
+const bcrypt = require('bcrypt');
 
 const userSchema = new mongoose.Schema({
   email: {
@@ -17,8 +17,6 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
-
-  //them trường phân quyền
   role: {
     type: String,
     enum: ['user', 'admin'],
@@ -32,6 +30,10 @@ const userSchema = new mongoose.Schema({
   phoneNumber: {
     type: String,
     required: true,
+  },
+  address: { 
+    type: String,
+    required: false,
   },
 });
 

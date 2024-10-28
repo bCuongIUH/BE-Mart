@@ -24,6 +24,11 @@ const billSchema = new mongoose.Schema({
         type: Number, 
         required: false 
       },
+      unit: { 
+        type: String,
+        required: true,
+      },
+    
 
       createBy: { type: String, required: false },
     },

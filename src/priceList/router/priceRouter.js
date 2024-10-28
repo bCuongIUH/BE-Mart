@@ -11,6 +11,7 @@ router.post('/addprice/', addPricesToPriceList);
 // Get all Price Lists
 router.get('/', getAllPriceLists);
 router.get('/priceall', getActiveProductPrices);
+
 //lấy giá theo sản phẩm và đơn vị
 
 

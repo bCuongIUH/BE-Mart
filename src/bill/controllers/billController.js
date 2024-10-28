@@ -18,7 +18,7 @@ exports.createBill = async (req, res) => {
     const cart = await Cart.findOne({
       user: userId,
       status: "ChoThanhToan",
-    }).populate("items.product");
+    }).populate("items.product"); 
 
     // Check if the cart exists and has items
     if (!cart || cart.items.length === 0) {
@@ -35,32 +35,17 @@ exports.createBill = async (req, res) => {
 
     const bill = new Bill({
       user: userId,
-      items: cart.items,
+      items: cart.items, 
       totalAmount,
       paymentMethod,
       purchaseType: "Online",
     });
 
-    await bill.save();
+    await bill.save(); 
 
     // Update cart status
-    cart.status = "Shipped";
+    cart.status = "Shipped"; 
     await cart.save();
-
-    // Update product quantities
-    for (const item of cart.items) {
-      const product = await Product.findById(item.product._id); // Fetch product
-      const newQuantity = product.quantity - item.quantity * item.unitValue;
-
-      if (newQuantity < 0) {
-        return res
-          .status(400)
-          .json({ message: "Số lượng sản phẩm trong kho không đủ" });
-      }
-
-      product.quantity = newQuantity;
-      await product.save(); // Save updated product
-    }
 
     res.status(201).json({ message: "Hóa đơn đã được tạo thành công", bill });
   } catch (error) {
@@ -68,6 +53,7 @@ exports.createBill = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
 
 
 // //mua hàng trục tiếp

@@ -74,15 +74,22 @@ exports.createProduct = async (req, res) => {
 //xóa sp
 exports.deleteProduct = async (req, res) => {
   try {
-    const deletedProduct = await Product.findByIdAndDelete(req.params.id);
-    if (!deletedProduct) {
+    // Find the product by ID
+    const product = await Product.findById(req.params.id);
+    if (!product) {
       return res.status(404).json({ message: 'Không tìm thấy sản phẩm' });
     }
-    res.status(200).json({ message: 'Xóa sản phẩm thành công' });
+
+    
+    product.isDeleted = true;
+    await product.save();
+
+    res.status(200).json({ message: 'Đã xóa  sản phẩm thành công' });
   } catch (error) {
-    res.status(500).json({ message: 'Lỗi khi xóa sản phẩm', error });
+    res.status(500).json({ message: 'Lỗi khi xóa  sản phẩm', error });
   }
 };
+
 //cập nhật
 exports.updateProduct = async (req, res) => {
   try {
@@ -127,20 +134,22 @@ if (!category) {
 // Lấy tất cả sản phẩm
 exports.getAllProducts = async (req, res) => {
   try {
-    const products = await Product.find()
+    const products = await Product.find({ isDeleted: false });
     
     res.status(200).json(products);
   } catch (error) {
     res.status(500).json({ message: 'Lỗi khi lấy danh sách sản phẩm', error });
   }
 };
+
+
 exports.getProductByCode = async (req, res) => {
   try {
-    const { code } = req.params; // Lấy mã sản phẩm từ tham số URL
-    const product = await Product.findOne({ code }); // Tìm sản phẩm theo mã
+    const { code } = req.params;
+    const product = await Product.findOne({ code }); 
 
     if (!product) {
-      return res.status(404).json({ message: 'Sản phẩm không tìm thấy' }); // Trả về thông báo nếu không tìm thấy
+      return res.status(404).json({ message: 'Sản phẩm không tìm thấy' }); 
     }
 
     res.status(200).json(product); // Trả về sản phẩm nếu tìm thấy

@@ -15,6 +15,8 @@ const ProductSchema = new mongoose.Schema({
     name: { type: String, required: true },
     description: { type: String },
     image: { type: String },
+    isDeleted: { type: Boolean, default: false } ,
+    isActive: { type: Boolean, default: true },
     category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category' },
     supplier: { type: mongoose.Schema.Types.ObjectId, ref: 'Supplier' },
     baseUnit: UnitSchema,

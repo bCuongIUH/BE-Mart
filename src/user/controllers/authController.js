@@ -64,132 +64,7 @@ exports.login = async (req, res) => {
   }
 };
 
-// exports.login = async (req, res) => {
-//   const { email, password } = req.body;
- 
-//   try {
-//     const user = await User.findOne({ email });
-//     if (!user) {
-//       return res.status(400).json({ message: 'Người dùng không tồn tại' });
-//     }
 
-//     const isMatch = await bcrypt.compare(password, user.password);
-//     if (!isMatch) {
-//       return res.status(400).json({ message: 'Mật khẩu không chính xác' });
-//     }
-
-//     if (!user.isVerified) {
-//       return res.status(400).json({ message: 'Tài khoản chưa được xác minh' });
-//     }
-
-//     // Tạo accessToken và refreshToken
-//     const accessToken = jwt.sign(
-//       { id: user._id, role: user.role }, 
-//       process.env.JWT_SECRET, 
-//       { expiresIn: '15m' }
-//     );
-
-//     const refreshToken = jwt.sign(
-//       { id: user._id, role: user.role }, 
-//       process.env.JWT_REFRESH_SECRET, 
-//       { expiresIn: '1d' } 
-//     );
-
-//     res.cookie('token', accessToken, { 
-//       httpOnly: true, 
-//       secure: process.env.NODE_ENV === 'production', 
-//       maxAge: 15 * 60 * 1000, // 15 phút
-//     });
-
-//     res.cookie('refreshToken', refreshToken, { 
-//       httpOnly: true, 
-//       secure: process.env.NODE_ENV === 'production', 
-//       maxAge: 1 * 24 * 60 * 60 * 1000, //
-//     });
-
-//     return res.status(200).json({
-//       accessToken,
-//       refreshToken,
-//       user: {
-//         _id: user._id,
-//         email: user.email,
-//         fullName: user.fullName,
-//         role: user.role,
-//         phoneNumber: user.phoneNumber,
-//       },
-//       message: 'Đăng nhập thành công'
-//     });
-
-//   } catch (error) {
-//     console.error('Lỗi đăng nhập:', error.message);
-//     return res.status(500).json({ message: 'Có lỗi xảy ra' });
-//   }
-// };
-// // kiểm tra token
-// exports.checkToken = (req, res, next) => {
-//   try {
-//     const accessToken = req.headers["accesstoken"];
-//     const refreshToken = req.headers["refreshtoken"];
-
-//     if (!accessToken && !refreshToken) {
-//       return res.status(401).json({ message: 'Không có token' });
-//     }
-
-//     // Kiểm tra accessToken
-//     jwt.verify(accessToken, process.env.JWT_SECRET, (err, decoded) => {
-//       if (err) {
-//         // Nếu accessToken hết hạn, kiểm tra refreshToken
-//         jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET, (err, decodedRefresh) => {
-//           if (err) {
-//             return res.status(403).json({ message: 'Token không hợp lệ' });
-//           }
-
-//           // Nếu refreshToken hợp lệ, tạo accessToken mới
-//           const newAccessToken = jwt.sign(
-//             { id: decodedRefresh.id, role: decodedRefresh.role },
-//             process.env.JWT_SECRET,
-//             { expiresIn: '15m' }
-//           );
-
-//           res.cookie('token', newAccessToken, {
-//             httpOnly: true,
-//             secure: process.env.NODE_ENV === 'production',
-//             maxAge: 15 * 60 * 1000, // 15 phút
-//           });
-
-//           req.user = decodedRefresh;
-//           next();
-//         });
-//       } else {
-//         // AccessToken hợp lệ
-//         req.user = decoded;
-//         next();
-//       }
-//     });
-//   } catch (error) {
-//     res.status(500).json({ message: 'Lỗi server khi kiểm tra token' });
-//   }
-// };
-// //kiểm tra role
-// exports.someProtectedRoute = (req, res) => {
-//   // Đảm bảo req.user không undefined
-//   if (!req.user) {
-//     console.log(req.user);
-    
-//     return res.status(401).json({ message: "Người dùng chưa xác thực" });
-//   }
-
-//   const userRole = req.user.role; // Truy cập role từ req.user
-//   // Tiếp tục xử lý yêu cầu dựa trên role
-//   if (userRole === 'admin') {
-//     return res.status(200).json({ message: "Đây là route dành cho quản trị viên." });
-//   }
-
-//   return res.status(403).json({ message: "Bạn không có quyền truy cập." });
-// };
-
-
-//đăng kí
 
 exports.register = async (req, res) => {
   const { email, password, fullName, phoneNumber } = req.body;
@@ -298,7 +173,7 @@ exports.forgotPassword = async (req, res) => {
     if (!user) return res.status(StatusCodes.NOT_FOUND).json({ message: 'Người dùng không tồn tại' });
 
     const otp = generateOTP();
-    const otpExpires = Date.now() + 10 * 60 * 1000; // thời gian tồn lại otp 10p
+    const otpExpires = Date.now() + 10 * 60 * 1000; 
 
     user.otp = otp;
     user.otpExpires = otpExpires;
@@ -348,11 +223,9 @@ exports.changePassword = async (req, res) => {
     const isMatch = await bcrypt.compare(oldPassword, user.password);
     if (!isMatch) return res.status(400).json({ message: 'Mật khẩu cũ không chính xác' });
 
-    // Mã hóa mật khẩu mới
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-
+   
     // Cập nhật mật khẩu mới
-    user.password = hashedPassword;
+    user.password = newPassword;
     await user.save();
 
     res.status(200).json({ message: 'Đổi mật khẩu thành công' });

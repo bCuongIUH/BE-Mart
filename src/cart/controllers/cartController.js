@@ -1,70 +1,59 @@
 const Cart = require("../model/cart");
 const Product = require("../../products/models/product");
+const PriceList = require("../../priceList/model/priceModels");
 
 // Thêm sản phẩm vào giỏ hàng
-// Thêm sản phẩm vào giỏ hàng
+
 exports.addToCart = async (req, res) => {
   try {
-    const { userId, productId, quantity, currentPrice, unit, unitValue } =
-      req.body;
+    const { userId, productId, quantity, unit, price } = req.body;
 
-    if (!userId) {
-      return res.status(400).json({ message: "User ID không có" });
-    }
-
-    // Kiểm tra xem sản phẩm có tồn tại không
-    const product = await Product.findById(productId);
-    if (!product) {
-      return res.status(404).json({ message: "Sản phẩm không tồn tại" });
-    }
-
-    // Tính tổng giá trị
-    const totalPrice = currentPrice * quantity;
-
+    // Tìm giỏ hàng hiện tại
     let cart = await Cart.findOne({ user: userId, status: "ChoThanhToan" });
+
+    // Nếu không có giỏ hàng, tạo mới
     if (!cart) {
       cart = new Cart({
         user: userId,
-        items: [
-          {
-            product: productId,
-            quantity,
-            currentPrice,
-            totalPrice,
-            unit: unit || null, // Lưu unit nếu có, ngược lại lưu null
-            unitValue: unitValue || null, // Lưu unitValue nếu có, ngược lại lưu null
-          },
-        ],
+        items: [{
+          product: productId,
+          quantity,
+          currentPrice: price,
+          totalPrice: price * quantity,
+          unit: unit,
+        }],
       });
     } else {
+      // Nếu giỏ hàng đã tồn tại, kiểm tra sản phẩm đã có trong giỏ hàng chưa
       const existingItemIndex = cart.items.findIndex(
-        (item) =>
-          item.product.toString() === productId &&
-          (item.unit === unit || (!item.unit && !unit))
+        item => item.product.toString() === productId && item.unit === unit
       );
 
       if (existingItemIndex > -1) {
+        // Nếu sản phẩm đã có trong giỏ hàng, cập nhật số lượng và giá trị tổng
         cart.items[existingItemIndex].quantity += quantity;
-        cart.items[existingItemIndex].totalPrice += totalPrice;
+        cart.items[existingItemIndex].totalPrice += price * quantity;
       } else {
+        // Nếu sản phẩm chưa có, thêm mới vào giỏ hàng
         cart.items.push({
           product: productId,
           quantity,
-          currentPrice,
-          totalPrice,
-          unit: unit || null, // Lưu unit nếu có, ngược lại lưu null
-          unitValue: unitValue || null, // Lưu unitValue nếu có, ngược lại lưu null
+          currentPrice: price,
+          totalPrice: price * quantity,
+          unit: unit,
         });
       }
     }
 
-    // Lưu giỏ hàng
     await cart.save();
-    res.status(200).json(cart);
+
+    // Trả về giỏ hàng đã cập nhật
+    res.status(200).json({ success: true, message: "Thêm sản phẩm vào giỏ hàng thành công!", cart });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
+
 exports.addToCartOffline = async (req, res) => {
   try {
     const { productId, quantity } = req.body;

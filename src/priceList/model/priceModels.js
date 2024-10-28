@@ -8,6 +8,7 @@ const PriceListSchema = new mongoose.Schema({
     endDate: { type: Date, required: true },
     isActive: { type: Boolean, default: false },
     createdAt: { type: Date, default: Date.now },
+    isDeleted: { type: Boolean, default: false },
     products: [
         {
             productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
