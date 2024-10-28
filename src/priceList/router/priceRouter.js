@@ -1,25 +1,29 @@
 const express = require('express');
-const { createPriceList, getAllPriceLists, getPriceListById, updatePriceList, deletePriceList, addPricesToPriceList, activatePriceList, deactivatePriceList, updateProductPricesByUnitDetails } = require('../controller/priceController');
+const { createPriceList, getAllPriceLists, addPricesToPriceList, getActiveProductPrices, updatePriceListStatus } = require('../controller/priceController');
+const { deletePriceList, updatePriceList } = require('../controller/priceCRUD.JS');
+
 const router = express.Router();
 // const priceListController = require('../controllers/priceListController');
 
 // Create a Price List
 router.post('/', createPriceList);
-
+router.post('/addprice/', addPricesToPriceList);
 // Get all Price Lists
 router.get('/', getAllPriceLists);
+router.get('/priceall', getActiveProductPrices);
+//lấy giá theo sản phẩm và đơn vị
+
 
 // Get a single Price List by ID
-router.get('/:id', getPriceListById);
+// router.get('/:id', getPriceListById);
+// Cập nhật bảng giá
+router.put('/update/:id', updatePriceList);
 
-// Update a Price List
-router.put('/:id', updatePriceList);
-router.post('/addprice/', addPricesToPriceList);
-router.post('/addprice/demo', updateProductPricesByUnitDetails);
-// Delete a Price List
-router.delete('/:id', deletePriceList);
+// Xóa bảng giá
+router.delete('/delete/:id', deletePriceList);
 
-router.post('/activate', activatePriceList);
 
-router.post('/deactivate', deactivatePriceList);
+router.post('/status', updatePriceListStatus);
+
+
 module.exports = router;

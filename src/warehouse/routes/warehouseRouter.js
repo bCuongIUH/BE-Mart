@@ -5,7 +5,10 @@ const { createWarehouseEntry, getAllWarehouse, getProductsBySupplierId} = requir
 
 
 // Thêm phiếu nhập kho
+
 router.post('/add', createWarehouseEntry);
 router.get('/', getAllWarehouse)
+
+
 router.get('/supplier/:supplierId', getProductsBySupplierId);
 module.exports = router;

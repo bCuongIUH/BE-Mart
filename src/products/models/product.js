@@ -1,29 +1,25 @@
+
 const mongoose = require('mongoose');
 
-const ProductSchema = new mongoose.Schema({
-    code: { type: String, unique: true },
-    barcode: { type: String, unique: true },
-    name: { type: String, required: true , unique : true},
-    description: { type: String, required: true },
-    image: { type: String, required: true },
-    category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', required: true },
-    quantity: { type: Number, default: 0 },
-    isAvailable: { type: Boolean, default: false },
-    currentPrice: { type: Number, default: 0 },
-    
-    supplier: { type: mongoose.Schema.Types.ObjectId, ref: 'Supplier', required: true },
+const UnitSchema = new mongoose.Schema({
+    name: { type: String, required: true },
+    conversionValue: { type: Number, default: 1 },
+    barcode: { type: String, unique: false, required: false },
+    image: { type: String }
+}, {});
 
-    units: [
-      {
-          unitLine: { type: mongoose.Schema.Types.ObjectId, ref: 'UnitLine', required: true },
-          details: [{ type: mongoose.Schema.Types.ObjectId, ref: 'UnitDetail' }]
-      }
-  ]
-      
- 
-    
+
+const ProductSchema = new mongoose.Schema({
+    code: { type: String, required: true, unique: true },
+    barcode: { type: String, required: true, unique: true },
+    name: { type: String, required: true },
+    description: { type: String },
+    image: { type: String },
+    category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category' },
+    supplier: { type: mongoose.Schema.Types.ObjectId, ref: 'Supplier' },
+    baseUnit: UnitSchema,
+    conversionUnits: [UnitSchema] 
 }, { timestamps: true });
 
-const Product = mongoose.model('Products', ProductSchema);
-
+const Product = mongoose.model('Product', ProductSchema);
 module.exports = Product;

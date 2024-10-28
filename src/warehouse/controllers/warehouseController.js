@@ -1,14 +1,12 @@
 const mongoose = require('mongoose');
 const Product = require('../../products/models/product');
 const Warehouse = require('../models/warehouse');
-const Category = require('../../products/models/category')
-const s3 = require('../../config/configS3'); 
-const uuid = require('uuid');
-const uploadImageToCloudinary = require('../../upload/uploadImage');
 const User = require('../../user/models/User');
 const Supplier = require('../../supplier/models/supplier');
 const WarehouseEntry = require('../models/warehouse');
+const Stock = require('../models/Stock');
 // Lấy tất cả sp trong kho
+
 exports.getAllWarehouse = async (req, res) => {
     try {
       const warehouse = await Warehouse.find();
@@ -40,61 +38,86 @@ exports.getAllWarehouse = async (req, res) => {
     }
 };
 
-
+// tạo phiếu nhập kho   
 exports.createWarehouseEntry = async (req, res) => {
     try {
-        const { entryCode, supplierId, products, enteredBy } = req.body; 
+        const { entryCode, supplierId, products, enteredBy } = req.body;
 
-        // Validate supplier ID
+        // Validate enteredBy (ID người nhập)
         if (!enteredBy || enteredBy.length !== 24) {
-            return res.status(400).json({ message: 'Nhà cung cấp không hợp lệ' });
+            return res.status(400).json({ message: 'ID người nhập không hợp lệ' });
         }
-        
+
+        // Kiểm tra sự tồn tại của nhà cung cấp
         const supplier = await Supplier.findById(supplierId);
         if (!supplier) {
             return res.status(400).json({ message: 'Nhà cung cấp không hợp lệ' });
         }
 
-        let totalAmount = 0;
-
-        // Iterate over each product in the request
-        for (const item of products) {
-            const product = await Product.findById(item.productId);
-            if (!product || product.supplier.toString() !== supplierId) {
-                return res.status(400).json({ message: `Sản phẩm với ID ${item.productId} không thuộc nhà cung cấp này.` });
-            }
-
-            // Ensure quantity and price are numbers to avoid concatenation
-            const itemQuantity = Number(item.quantity);
-            const itemPrice = Number(item.price);
-            
-            if (isNaN(itemQuantity) || isNaN(itemPrice)) {
-                return res.status(400).json({ message: 'Số lượng hoặc giá của sản phẩm không hợp lệ.' });
-            }
-
-            // Calculate total amount
-            totalAmount += itemQuantity * itemPrice;
-
-            // Update product quantity (add the quantity to the existing one)
-            product.quantity += itemQuantity;
-
-            // Save the updated product
-            await product.save(); 
+        // Kiểm tra mã nhập kho có trùng không
+        const existingEntry = await WarehouseEntry.findOne({ entryCode });
+        if (existingEntry) {
+            return res.status(400).json({ message: 'Mã nhập kho đã tồn tại. Vui lòng sử dụng mã khác.' });
         }
 
-        // Create the warehouse entry
-        const newWarehouseEntry = new WarehouseEntry({
+        // Kiểm tra tính hợp lệ của các sản phẩm trước khi tạo bản ghi nhập kho
+        for (const item of products) {
+            const product = await Product.findById(item.productId);
+            if (!product) {
+                return res.status(400).json({ message: `Không tìm thấy sản phẩm với ID ${item.productId}.` });
+            }
+
+            // Chuyển đổi quantity về số để tránh lỗi
+            const itemQuantity = Number(item.quantity);
+            if (isNaN(itemQuantity) || itemQuantity <= 0) {
+                return res.status(400).json({ message: 'Số lượng sản phẩm không hợp lệ.' });
+            }
+
+            // Tìm đơn vị chuyển đổi trong sản phẩm (baseUnit hoặc conversionUnits)
+            const unit = product.baseUnit.name === item.unit
+                ? product.baseUnit
+                : product.conversionUnits.find(u => u.name === item.unit);
+
+            if (!unit) {
+                // Nếu không tìm thấy đơn vị tương ứng, báo lỗi
+                return res.status(400).json({ message: `Đơn vị ${item.unit} không hợp lệ cho sản phẩm ${product.name}.` });
+            }
+        }
+
+        // Tạo mới bản ghi nhập kho
+        const newWarehouseEntryRecord = new WarehouseEntry({
             entryCode,
             enteredBy,
             supplier: supplierId,
-            totalAmount,
-            products,
+            products, // Lưu danh sách sản phẩm nhập với đơn vị và số lượng
         });
 
-        // Save the new warehouse entry
-        await newWarehouseEntry.save();
+        // Lưu bản ghi nhập kho mới
+        await newWarehouseEntryRecord.save();
 
-        res.status(201).json({ message: 'Nhập kho thành công', warehouseEntry: newWarehouseEntry });
+        // Nếu lưu bản ghi nhập kho thành công, cập nhật số lượng sản phẩm trong kho
+        for (const item of products) {
+            const product = await Product.findById(item.productId);
+            const itemQuantity = Number(item.quantity);
+
+            // Cập nhật số lượng sản phẩm trong kho
+            const existingStock = await Stock.findOne({ productId: product._id, unit: item.unit });
+            if (existingStock) {
+                existingStock.quantity += itemQuantity; 
+                existingStock.lastUpdated = Date.now(); // Cập nhật thời gian
+                await existingStock.save(); // Lưu lại thay đổi
+            } else {
+                // Nếu chưa có bản ghi, tạo mới
+                const newStock = new Stock({
+                    productId: product._id,
+                    quantity: itemQuantity,
+                    unit: item.unit
+                });
+                await newStock.save(); // Lưu bản ghi mới
+            }
+        }
+
+        res.status(201).json({ message: 'Nhập kho thành công', warehouseEntry: newWarehouseEntryRecord });
     } catch (error) {
         console.error('Lỗi khi nhập kho:', error);
         res.status(500).json({ message: 'Lỗi máy chủ', error: error.message });

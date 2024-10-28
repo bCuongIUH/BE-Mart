@@ -10,15 +10,15 @@ const warehouseRouter = require('./src/warehouse/routes/warehouseRouter');
 const cartRouter = require('./src/cart/routes/cartRouter');
 const billRouter = require('./src/bill/routes/billRouter');
 const categoryRoutes = require('./src/products/routes/categoryRoutes');
-const unitRoutes = require('./src/unit/routes/unitRoutes')
+
 const priceListRoutes = require('./src/priceList/router/priceRouter');
 const promotionProgramRoutes = require("./src/promotion/router/promotionProgramRoutes");
 const voucherRoutes = require("./src/promotion/router/voucherRoutes");
 
 const unitsRoutes = require('./src/units/routers/UnitRouters')
 const unitsCRUDRoutes = require('./src/units/routers/UnitCRUD')
+const stockRouter = require('./src/warehouse/routes/StockRouter');
 
-const priceListRouter = require('./src/priceList/router/routerprice');
 dotenv.config();
 const app = express();
 const cron = require('node-cron');
@@ -43,13 +43,13 @@ app.use('/api/warehouses', warehouseRouter);
 app.use('/api/cart',cartRouter )
 app.use('/api/bill',billRouter )
 app.use('/api/categories', categoryRoutes);
-app.use('/api/unitsDemo',unitRoutes)
+
 app.use('/api/price-list',priceListRoutes)
 app.use("/api/promotion-program", promotionProgramRoutes);
 app.use("/api/voucher", voucherRoutes);
 app.use("/api/units", unitsRoutes);
 app.use("/api/units/crud", unitsCRUDRoutes);
-app.use("/api/price", priceListRouter);
+app.use("/api/stock", stockRouter);
 
 // Kết nối MongoDB
 mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
