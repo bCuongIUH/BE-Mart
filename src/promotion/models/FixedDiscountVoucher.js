@@ -9,7 +9,7 @@ const fixedDiscountSchema = new mongoose.Schema(
     },
     conditions: [
       {
-        minOrderValue: { type: Number, required: true },
+        minOrderValue: { type: Number, required: true , unique: true},
         discountAmount: { type: Number, required: true },
       },
     ],

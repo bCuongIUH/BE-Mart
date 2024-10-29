@@ -9,7 +9,7 @@ const percentageDiscountSchema = new mongoose.Schema(
     },
     conditions: [
       {
-        minOrderValue: { type: Number, required: true },
+        minOrderValue: { type: Number, required: true , unique: true},
         discountPercentage: { type: Number, required: true },
         maxDiscountAmount: { type: Number },
       },

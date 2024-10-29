@@ -80,7 +80,7 @@ exports.createVoucher = async (req, res) => {
       case "FixedDiscount":
         const fixedDiscount = new FixedDiscount({
           voucherId: newVoucher._id,
-          conditions, // conditions sẽ bao gồm minOrderValue, discountAmount
+          conditions,
         });
         await fixedDiscount.save();
         break;

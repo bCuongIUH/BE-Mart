@@ -28,9 +28,7 @@ const billSchema = new mongoose.Schema({
         type: String,
         required: true,
       },
-    
-
-      createBy: { type: String, required: false },
+  
     },
   ],
   totalAmount: { 
@@ -42,6 +40,11 @@ const billSchema = new mongoose.Schema({
     enum: ['Pending', 'Paid', 'Canceled'], 
     default: 'Pending' 
   },
+
+   appliedVoucher: { // ID chương trình khuyến mãi áp dụng
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Voucher',
+    required: false},
   createdAt: { 
     type: Date, 
     default: Date.now 
@@ -60,7 +63,9 @@ const billSchema = new mongoose.Schema({
     enum: ['Online', 'Offline'],  
     required: true 
   },
- 
+   createBy: { type: mongoose.Schema.Types.ObjectId, 
+    ref: 'EmployeeManagement', 
+    required: false  },
 });
 
 module.exports = mongoose.model('Bill', billSchema);

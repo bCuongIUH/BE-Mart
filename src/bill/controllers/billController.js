@@ -2,6 +2,10 @@ const Bill = require('../models/billModel');
 const Cart = require('../../cart/model/cart');
 const Product = require('../../products/models/product');
 const Stock = require('../../warehouse/models/Stock');
+const Voucher = require('../../promotion/models/Voucher');
+const FixedDiscountVoucher = require('../../promotion/models/FixedDiscountVoucher');
+const PercentageDiscountVoucher = require('../../promotion/models/PercentageDiscountVoucher');
+const BuyXGetYVoucher = require('../../promotion/models/BuyXGetYVoucher');
 
 // Tạo hóa đơn từ giỏ hàng đã mua
 //update ngày 10/7 
@@ -78,102 +82,163 @@ exports.createBill = async (req, res) => {
 
 
 // //mua hàng trục tiếp
+// Hàm tạo hóa đơn cho giao dịch mua hàng trực tiếp
 exports.createDirectPurchaseBill = async (req, res) => {
   try {
-    const {carid, paymentMethod, phoneNumber, items , createBy } = req.body; 
+    const { paymentMethod, phoneNumber, items, createBy } = req.body;
     if (!items || items.length === 0) {
       return res.status(400).json({ message: 'Danh sách sản phẩm không hợp lệ' });
     }
+
+    // Tính tổng tiền của hóa đơn dựa trên số lượng và giá của mỗi sản phẩm
     const totalAmount = items.reduce((acc, item) => acc + (item.currentPrice * item.quantity), 0);
 
-    //
+    // Tạo hóa đơn mới cho giao dịch mua hàng trực tiếp
     const bill = new Bill({
       user: null, 
       items,
       totalAmount,
       paymentMethod,
-      phoneNumber, //
-      status: 'Paid' ,
-      purchaseType :'Offline',
+      phoneNumber : phoneNumber || '', 
+      status: 'Paid', 
+      purchaseType: 'Offline',
       createBy
-      // km
     });
-    console.log(bill);
-    
+
     await bill.save();
-    // Giảm số lượng từng sản phẩm trong kho
+
+    // Kiểm tra và cập nhật tồn kho cho từng sản phẩm
     for (const item of items) {
-      const product = await Product.findById(item.product).populate('');
-      if (!product) {
-        return res.status(404).json({ message: `Không tìm thấy sản phẩm với ID ${item.product}` });
+      const stock = await Stock.findOne({
+        productId: item.product,
+        unit: item.unit,
+      });
+
+      // Kiểm tra nếu tồn kho không đủ số lượng
+      if (!stock || stock.quantity < item.quantity) {
+        return res.status(400).json({
+          message: `Sản phẩm ${item.product} không đủ số lượng tồn kho cho đơn vị ${item.unit}.`
+        });
       }
 
-      const productLine = product; 
-      const newQuantity = productLine.quantity - item.quantity;
-      if (newQuantity < 0) {
-        return res.status(400).json({ message: `Số lượng sản phẩm ${product.name} trong kho không đủ` });
-      }
-      productLine.quantity = newQuantity; 
-      await product.save(); 
+      // Trừ số lượng sản phẩm trong tồn kho
+      stock.quantity -= item.quantity;
+      await stock.save();
     }
 
     res.status(201).json({ message: 'Hóa đơn đã được tạo thành công', bill });
   } catch (error) {
+    console.error("Lỗi:", error);
     res.status(500).json({ message: error.message });
   }
 };
 
 
 
-// exports.createDirectPurchaseBill = async (req, res) => {
-//   try {
-//     const { carid, paymentMethod, phoneNumber, items } = req.body; 
-//     if (!items || items.length === 0) {
-//       return res.status(400).json({ message: 'Danh sách sản phẩm không hợp lệ' });
-//     }
+exports.createDirectPurchaseBillKM = async (req, res) => {
+  try {
+    const { paymentMethod, phoneNumber, items, createBy, voucherCode } = req.body;
 
-//     const totalAmount = items.reduce((acc, item) => acc + (item.currentPrice * item.quantity), 0);
+    if (!items || items.length === 0) {
+      return res.status(400).json({ message: 'Danh sách sản phẩm không hợp lệ' });
+    }
 
-//     const bill = new Bill({
-//       user: null, 
-//       items,
-//       totalAmount,
-//       paymentMethod,
-//       phoneNumber,
-//       status: 'Paid',
-//       purchaseType: 'Offline'
-//     });
+    // Tính tổng tiền ban đầu của hóa đơn
+    let totalAmount = items.reduce((acc, item) => acc + (item.currentPrice * item.quantity), 0);
+    let discount = 0; // Mức giảm giá sẽ được tính toán dựa trên voucher
 
-//     console.log(bill);
-    
-//     await bill.save();
+    // Kiểm tra và áp dụng voucher nếu có
+    if (voucherCode) {
+      const voucher = await Voucher.findOne({ code: voucherCode, isActive: true });
+      if (!voucher) {
+        return res.status(400).json({ message: 'Voucher không hợp lệ hoặc đã hết hạn.' });
+      }
 
-//     // Giảm số lượng từng sản phẩm trong kho
-//     for (const item of items) {
-//       const product = await Product.findById(item.product).populate('units.details');
-//       if (!product) {
-//         return res.status(404).json({ message: `Không tìm thấy sản phẩm với ID ${item.product}` });
-//       }
+      // Tính mức giảm giá dựa trên loại voucher
+      if (voucher.type === "BuyXGetY") {
+        discount = await applyBuyXGetYDiscount(voucher, items);
+      } else if (voucher.type === "FixedDiscount") {
+        discount = await applyFixedDiscount(voucher, totalAmount);
+      } else if (voucher.type === "PercentageDiscount") {
+        discount = await applyPercentageDiscount(voucher, totalAmount);
+      }
 
-//       const unitDetail = product.units[0].details.find(detail => detail._id.equals(item.unitDetailId));
-//       if (!unitDetail) {
-//         return res.status(400).json({ message: `Không tìm thấy đơn vị chi tiết cho sản phẩm ${product.name}` });
-//       }
+      // Điều chỉnh tổng tiền với mức giảm giá
+      totalAmount -= discount;
+    }
 
-//       const newQuantity = product.quantity - item.quantity;
-//       if (newQuantity < 0) {
-//         return res.status(400).json({ message: `Số lượng sản phẩm ${product.name} trong kho không đủ` });
-//       }
-      
-//       product.quantity = newQuantity; 
-//       await product.save(); 
-//     }
+    // Tạo hóa đơn mới với thông tin đã áp dụng khuyến mãi
+    const bill = new Bill({
+      user: null, // Mua hàng trực tiếp không yêu cầu ID người dùng
+      items,
+      totalAmount,
+      paymentMethod,
+      phoneNumber: phoneNumber || '',
+      status: 'Paid',
+      purchaseType: 'Offline',
+      createBy,
+      discountAmount: discount, // Thêm mức giảm giá vào hóa đơn
+    });
 
-//     res.status(201).json({ message: 'Hóa đơn đã được tạo thành công', bill });
-//   } catch (error) {
-//     res.status(500).json({ message: error.message });
-//   }
-// };
+    await bill.save();
+
+    // Kiểm tra và cập nhật tồn kho
+    for (const item of items) {
+      const stock = await Stock.findOne({ productId: item.product, unit: item.unit });
+
+      if (!stock || stock.quantity < item.quantity) {
+        return res.status(400).json({
+          message: `Sản phẩm ${item.product} không đủ số lượng tồn kho cho đơn vị ${item.unit}.`
+        });
+      }
+
+      stock.quantity -= item.quantity;
+      await stock.save();
+    }
+
+    res.status(201).json({ message: 'Hóa đơn đã được tạo thành công', bill });
+  } catch (error) {
+    console.error("Lỗi:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Hàm áp dụng voucher BuyXGetY
+async function applyBuyXGetYDiscount(voucher, items) {
+  const condition = await BuyXGetYVoucher.findOne({ voucherId: voucher._id });
+  if (!condition) return 0;
+
+  const eligibleItem = items.find((item) => item.product.toString() === condition.productXId.toString());
+  if (eligibleItem && eligibleItem.quantity >= condition.quantityX) {
+    const freeItems = Math.floor(eligibleItem.quantity / condition.quantityX) * condition.quantityY;
+    const productY = items.find((item) => item.product.toString() === condition.productYId.toString());
+    return productY ? productY.currentPrice * freeItems : 0;
+  }
+  return 0;
+}
+
+// Hàm áp dụng voucher FixedDiscount
+// Updated applyFixedDiscount function
+async function applyFixedDiscount(voucher, totalAmount) {
+  const condition = await FixedDiscountVoucher.findOne({ voucherId: voucher._id });
+  if (condition && totalAmount >= condition.conditions[0].minOrderValue) {
+    return condition.conditions[0].discountAmount;
+  }
+  return 0; // No discount if conditions are not met
+}
+
+
+// Hàm áp dụng voucher PercentageDiscount
+async function applyPercentageDiscount(voucher, totalAmount) {
+  const condition = await PercentageDiscountVoucher.findOne({ voucherId: voucher._id });
+
+  if (totalAmount >= condition.minOrderValue) {
+    const discount = (totalAmount * condition.discountPercentage) / 100;
+    return discount > condition.maxDiscountAmount ? condition.maxDiscountAmount : discount;
+  }
+  return 0;
+}
+
 
 // Lấy danh sách hóa đơn của người dùng
 exports.getBillsByUser = async (req, res) => {

@@ -1,5 +1,5 @@
 const express = require('express');
-const { createBill, getBillsByUser, getBillsByStatus, updateBillStatus, createDirectPurchaseBill, getAllBills,getOnlineBills,getOfflineBills } = require('../controllers/billController');
+const { createBill, getBillsByUser, getBillsByStatus, updateBillStatus, createDirectPurchaseBill, getAllBills,getOnlineBills,getOfflineBills, createDirectPurchaseBillKM } = require('../controllers/billController');
 const router = express.Router();
 
 
@@ -7,6 +7,7 @@ const router = express.Router();
 router.post('/create', createBill);
 // trực tiếp
 router.post('/create-buy-directly', createDirectPurchaseBill);
+router.post('/create-buy-km', createDirectPurchaseBillKM);
 // Lấy hóa đơn theo người dùng
 router.get('/user', getBillsByUser);
 router.get('/all', getAllBills);
