@@ -7,7 +7,7 @@ const router = express.Router();
 router.post('/create', createBill);
 // trực tiếp
 router.post('/create-buy-directly', createDirectPurchaseBill);
-router.post('/create-buy-km', createDirectPurchaseBillKM);
+// router.post('/create-buy-km', createDirectPurchaseBillKM);
 // Lấy hóa đơn theo người dùng
 router.get('/user', getBillsByUser);
 router.get('/all', getAllBills);

@@ -50,7 +50,7 @@ app.use("/api/voucher", voucherRoutes);
 app.use("/api/units", unitsRoutes);
 app.use("/api/units/crud", unitsCRUDRoutes);
 app.use("/api/stock", stockRouter);
-app.use("/api/employee", employeeRouter);
+app.use("/api/employees", employeeRouter);
 
 // Kết nối MongoDB
 mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })

@@ -2,6 +2,9 @@ const Voucher = require("../models/Voucher");
 const BuyXGetY = require("../models/BuyXGetYVoucher");
 const FixedDiscount = require("../models/FixedDiscountVoucher");
 const PercentageDiscount = require("../models/PercentageDiscountVoucher");
+const FixedDiscountVoucher = require("../models/FixedDiscountVoucher");
+const PercentageDiscountVoucher = require("../models/PercentageDiscountVoucher");
+const PromotionProgram = require("../models/PromotionProgram");
 
 exports.getVoucherByPromotionProgramId = async (req, res) => {
   try {
@@ -9,7 +12,9 @@ exports.getVoucherByPromotionProgramId = async (req, res) => {
 
     // Lấy danh sách voucher theo chương trình khuyến mãi
     const vouchers = await Voucher.find({
+      isActive: true,
       promotionProgram: promotionProgramId,
+      
     });
 
     // Tạo một mảng promises để lấy điều kiện cho từng loại voucher
@@ -212,6 +217,76 @@ exports.changeVoucherStatus = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       error: "Lỗi khi thay đổi trạng thái voucher",
+      details: error.message,
+    });
+  }
+};
+
+
+//  Lấy tất cả voucher đang hoạt động
+exports.getAllActiveVouchers = async (req, res) => {
+  try {
+    const currentDate = new Date();
+
+    // Lấy các chương trình khuyến mãi đang hoạt động với ObjectId hợp lệ
+    const activePromotions = await PromotionProgram.find({
+      isActive: true, 
+      startDate: { $lte: currentDate },
+      endDate: { $gte: currentDate },
+    });
+
+  
+    const activePromotionIds = activePromotions.map((promo) => promo._id);
+   
+
+    // Kiểm tra nếu không có chương trình khuyến mãi hợp lệ
+    if (activePromotionIds.length === 0) {
+      return res.status(200).json({
+        message: "Không có voucher nào hiện đang hoạt động.",
+        vouchers: [],
+      });
+    }
+
+    // Lấy tất cả voucher thuộc các chương trình khuyến mãi hợp lệ
+    const vouchers = await Voucher.find({
+      promotionProgram: { $in: activePromotionIds },
+      isActive: true,
+    });
+
+    // console.log("Vouchers found:", vouchers);
+    const voucherDetails = await Promise.all(
+      vouchers.map(async (voucher) => {
+        let conditions = null;
+
+        switch (voucher.type) {
+          case "BuyXGetY":
+            conditions = await BuyXGetY.findOne({ voucherId: voucher._id });
+            break;
+          case "FixedDiscount":
+            conditions = await FixedDiscount.findOne({
+              voucherId: voucher._id,
+            });
+            break;
+          case "PercentageDiscount":
+            conditions = await PercentageDiscount.findOne({
+              voucherId: voucher._id,
+            });
+            break;
+          default:
+            conditions = null;
+        }
+
+        return {
+          ...voucher._doc,
+          conditions: conditions ? conditions.conditions : null,
+        };
+      })
+    );
+
+    res.status(200).json(voucherDetails);
+  } catch (error) {
+    res.status(500).json({
+      error: "Lỗi khi lấy danh sách voucher",
       details: error.message,
     });
   }

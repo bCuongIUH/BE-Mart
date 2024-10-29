@@ -108,6 +108,7 @@ exports.deletePromotionProgram = async (req, res) => {
 
 // Lấy tất cả các chương trình khuyến mãi
 exports.getAllPromotionPrograms = async (req, res) => {
+  const currentDate = new Date();
   try {
     const promotionPrograms = await PromotionProgram.find();
     res.status(200).json(promotionPrograms);

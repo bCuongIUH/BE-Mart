@@ -45,133 +45,99 @@ exports.createPriceList = async (req, res) => {
 
 //THÊM GIÁ VÀO BẢNG
 exports.addPricesToPriceList = async (req, res) => {
-    const { priceListId, products } = req.body;
-  
-    try {
-      // Tìm bảng giá theo ID
-      const priceList = await PriceList.findById(priceListId);
-  
-      if (!priceList) {
-        return res
-          .status(404)
-          .json({ success: false, message: "Bảng giá không tồn tại!" });
-      }
-      if (priceList.isActive) {
-        return res.status(400).json({ success: false, message: 'Bảng giá đang hoạt động, không thể thêm hoặc cập nhật giá!' });
-      }
-      // Duyệt qua từng sản phẩm để thêm hoặc cập nhật giá
-      for (const product of products) {
-        const { productId, prices } = product;
-  
-        // Kiểm tra sản phẩm có tồn tại không
-        const foundProduct = await Product.findById(productId).populate(
-          "baseUnit conversionUnits"
-        );
-        if (!foundProduct) {
-          return res.status(404).json({
-            success: false,
-            message: `Sản phẩm với ID ${productId} không tồn tại!`,
-          });
-        }
-  
-        // Lấy tên đơn vị gốc
-        const baseUnitName = foundProduct.baseUnit.name;
-        const availableUnits = foundProduct.conversionUnits.map(
-          (unit) => unit.name
-        );
-        const allUnits = [baseUnitName, ...availableUnits];
-  
-        // Kiểm tra xem giá có hợp lệ với các đơn vị có sẵn không
-        const invalidPrices = prices.filter(
-          (price) => !allUnits.includes(price.unitName)
-        );
-        if (invalidPrices.length > 0) {
-          return res.status(400).json({
-            success: false,
-            message: "Có đơn vị không hợp lệ trong danh sách giá",
-            invalidUnits: invalidPrices,
-          });
-        }
-  
-        // Tìm các bảng giá khác có cùng sản phẩm trong khoảng thời gian trùng lặp
-        const existingPriceLists = await PriceList.find({
-          _id: { $ne: priceListId }, // Loại trừ bảng giá hiện tại
-          "products.productId": productId,
-          startDate: { $lte: priceList.endDate },
-          endDate: { $gte: priceList.startDate },
-        });
-  
-        // Nếu có bảng giá trùng, thực hiện cập nhật giá
-        if (existingPriceLists.length > 0) {
-          existingPriceLists.forEach(async (existingPriceList) => {
-            const productIndex = existingPriceList.products.findIndex(
-              (p) => p.productId.toString() === productId
-            );
-            if (productIndex !== -1) {
-              const existingProduct = existingPriceList.products[productIndex];
-  
-              prices.forEach((price) => {
-                const priceIndex = existingProduct.prices.findIndex(
-                  (p) => p.unitName === price.unitName
-                );
-                if (priceIndex !== -1) {
-                  // Cập nhật giá nếu đơn vị đã có
-                  existingProduct.prices[priceIndex].price = price.price;
-                } else {
-                  // Thêm giá mới nếu đơn vị chưa có
-                  existingProduct.prices.push(price);
-                }
-              });
-  
-              await existingPriceList.save();
-            }
-          });
-        } else {
-          // Nếu sản phẩm chưa tồn tại trong khoảng thời gian trùng, thêm mới hoặc cập nhật trong bảng giá hiện tại
-          const existingProductIndex = priceList.products.findIndex(
-            (p) => p.productId.toString() === productId
-          );
-  
-          if (existingProductIndex !== -1) {
-            // Nếu sản phẩm đã tồn tại, cập nhật giá
-            const existingProduct = priceList.products[existingProductIndex];
-  
-            prices.forEach((price) => {
-              const priceIndex = existingProduct.prices.findIndex(
-                (p) => p.unitName === price.unitName
-              );
-              if (priceIndex !== -1) {
-                existingProduct.prices[priceIndex].price = price.price;
-              } else {
-                existingProduct.prices.push(price);
-              }
-            });
-          } else {
-            // Nếu sản phẩm chưa có, thêm mới
-            priceList.products.push({
-              productId,
-              prices,
-            });
-          }
-        }
-      }
-  
-      await priceList.save();
-      res.status(200).json({
-        success: true,
-        message: "Giá đã được thêm hoặc cập nhật vào bảng giá!",
-        priceList,
-      });
-    } catch (error) {
-      console.error("Error adding prices to price list:", error);
-      res.status(500).json({
-        success: false,
-        message: "Không thể thêm hoặc cập nhật giá vào bảng giá",
-        error: error.message,
-      });
-    }
-  };
+  const { priceListId, products } = req.body;
 
+  try {
+    // Find the price list by ID
+    const priceList = await PriceList.findById(priceListId);
+
+    if (!priceList) {
+      return res.status(404).json({ success: false, message: "Bảng giá không tồn tại!" });
+    }
+    if (priceList.isActive) {
+      return res.status(400).json({ success: false, message: 'Bảng giá đang hoạt động, không thể thêm hoặc cập nhật giá!' });
+    }
+
+    for (const product of products) {
+      const { productId, prices } = product;
+
+      // Check if the product exists
+      const foundProduct = await Product.findById(productId).populate("baseUnit conversionUnits");
+      if (!foundProduct) {
+        return res.status(404).json({ success: false, message: `Sản phẩm với ID ${productId} không tồn tại!` });
+      }
+
+      // Get all available units for validation
+      const baseUnitName = foundProduct.baseUnit.name;
+      const availableUnits = foundProduct.conversionUnits.map((unit) => unit.name);
+      const allUnits = [baseUnitName, ...availableUnits];
+
+      // Validate that the prices have valid units
+      const invalidPrices = prices.filter((price) => !allUnits.includes(price.unitName));
+      if (invalidPrices.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Có đơn vị không hợp lệ trong danh sách giá",
+          invalidUnits: invalidPrices,
+        });
+      }
+
+      // Check for existing active or overlapping price lists with the same product
+      const existingPriceLists = await PriceList.find({
+        _id: { $ne: priceListId }, // Exclude the current price list
+        "products.productId": productId,
+        startDate: { $lte: priceList.endDate },
+        endDate: { $gte: priceList.startDate },
+      });
+
+      if (existingPriceLists.length > 0) {
+        // If the product is found in another active price list, prevent the update
+        return res.status(400).json({
+          success: false,
+          message: `Sản phẩm với ID ${productId} đã tồn tại trong một bảng giá khác có thời gian trùng lặp. Không thể thêm hoặc cập nhật giá.`,
+        });
+      }
+
+      // If the product isn't in any overlapping lists, add or update in the current price list
+      const existingProductIndex = priceList.products.findIndex(
+        (p) => p.productId.toString() === productId
+      );
+
+      if (existingProductIndex !== -1) {
+        // If the product already exists in the current list, update prices
+        const existingProduct = priceList.products[existingProductIndex];
+
+        prices.forEach((price) => {
+          const priceIndex = existingProduct.prices.findIndex(
+            (p) => p.unitName === price.unitName
+          );
+          if (priceIndex !== -1) {
+            existingProduct.prices[priceIndex].price = price.price;
+          } else {
+            existingProduct.prices.push(price);
+          }
+        });
+      } else {
+        // If the product doesn't exist, add it with the specified prices
+        priceList.products.push({ productId, prices });
+      }
+    }
+
+    await priceList.save();
+    res.status(200).json({
+      success: true,
+      message: "Giá đã được thêm hoặc cập nhật vào bảng giá!",
+      priceList,
+    });
+  } catch (error) {
+    console.error("Error adding prices to price list:", error);
+    res.status(500).json({
+      success: false,
+      message: "Không thể thêm hoặc cập nhật giá vào bảng giá",
+      error: error.message,
+    });
+  }
+};
 
 
 
@@ -209,34 +175,37 @@ exports.addPricesToPriceList = async (req, res) => {
     }
 };
 
+
 exports.getActiveProductPrices = async (req, res) => {
-    try {
-      const currentDate = new Date();
-  
-      // Tìm tất cả các bảng giá đang hoạt động
-      const activePriceLists = await PriceList.find({
-        startDate: { $lte: currentDate },
-        endDate: { $gte: currentDate },
-        isActive: true
-      });
-  
-      // Lấy tất cả sản phẩm và thông tin tồn kho
-      const products = await Product.find({ isDeleted: false })
-        .populate('baseUnit conversionUnits category supplier')
-        .lean();  // Sử dụng lean() để trả về dữ liệu thuần túy
-  
-      const stocks = await Stock.find();
-  
-      const prices = [];
-  
-      // Nếu không tìm thấy bảng giá nào đang hoạt động
-      if (activePriceLists.length === 0) {
-        // Duyệt qua tất cả sản phẩm và thiết lập giá bằng 0 cho các đơn vị
-        products.forEach(product => {
-          const productStocks = stocks.filter(s => s.productId.toString() === product._id.toString());
-  
+  try {
+    const currentDate = new Date();
+
+    // Tìm tất cả các bảng giá đang hoạt động
+    const activePriceLists = await PriceList.find({
+      startDate: { $lte: currentDate },
+      endDate: { $gte: currentDate },
+      isActive: true
+    });
+
+    // Lấy tất cả sản phẩm và thông tin tồn kho
+    const products = await Product.find({ isDeleted: false })
+      .populate('baseUnit conversionUnits category supplier')
+      .lean();  // Sử dụng lean() để trả về dữ liệu thuần túy
+
+    const stocks = await Stock.find();
+
+    const prices = [];
+
+    // Duyệt qua từng bảng giá hoạt động để lấy giá của các sản phẩm
+    activePriceLists.forEach(priceList => {
+      priceList.products.forEach(p => {
+        const product = products.find(prod => prod._id.toString() === p.productId.toString());
+
+        if (product) {
+          const productStocks = stocks.filter(s => s.productId.toString() === p.productId.toString());
+
           const priceObj = {
-            productId: product._id,
+            productId: p.productId,
             image: product.image,
             description: product.description,
             productName: product.name,
@@ -244,92 +213,82 @@ exports.getActiveProductPrices = async (req, res) => {
             supplier: product.supplier ? product.supplier.name : null, // Lấy tên nhà cung cấp
             units: []
           };
-  
-          // Đơn vị cơ bản với giá bằng 0 và giá trị quy đổi
+
+          // Đơn vị cơ bản
           const baseUnitStock = productStocks.find(s => s.unit === product.baseUnit.name);
           priceObj.units.push({
             unitName: product.baseUnit.name,
             quantity: baseUnitStock ? baseUnitStock.quantity : 0,
-            price: 0,
+            price: p.prices.find(price => price.unitName === product.baseUnit.name)?.price || 0,
             conversionValue: product.baseUnit.conversionValue
           });
-  
-          // Đơn vị quy đổi với giá bằng 0 và giá trị quy đổi
+
+          // Đơn vị quy đổi
           product.conversionUnits.forEach(unit => {
             const conversionUnitStock = productStocks.find(s => s.unit === unit.name);
             priceObj.units.push({
               unitName: unit.name,
               quantity: conversionUnitStock ? conversionUnitStock.quantity : 0,
-              price: 0,
+              price: p.prices.find(price => price.unitName === unit.name)?.price || 0,
               conversionValue: unit.conversionValue
             });
           });
-  
+
           prices.push(priceObj);
-        });
-  
-        return res.status(200).json({
-          success: true,
-          message: 'Không tìm thấy bảng giá nào đang hoạt động, nhưng đã lấy tất cả sản phẩm với giá = 0.',
-          prices
-        });
-      }
-  
-      // Duyệt qua từng bảng giá hoạt động để lấy giá của các sản phẩm
-      activePriceLists.forEach(priceList => {
-        priceList.products.forEach(p => {
-          const product = products.find(prod => prod._id.toString() === p.productId.toString());
-  
-          if (product) {
-            const productStocks = stocks.filter(s => s.productId.toString() === p.productId.toString());
-  
-            const priceObj = {
-              productId: p.productId,
-              image: product.image,
-              description: product.description,
-              productName: product.name,
-              category: product.category ? product.category.name : null, // Lấy tên danh mục
-              supplier: product.supplier ? product.supplier.name : null, // Lấy tên nhà cung cấp
-              units: []
-            };
-  
-            // Đơn vị cơ bản
-            const baseUnitStock = productStocks.find(s => s.unit === product.baseUnit.name);
-            priceObj.units.push({
-              unitName: product.baseUnit.name,
-              quantity: baseUnitStock ? baseUnitStock.quantity : 0,
-              price: p.prices.find(price => price.unitName === product.baseUnit.name)?.price || 0,
-              conversionValue: product.baseUnit.conversionValue
-            });
-  
-            // Đơn vị quy đổi
-            product.conversionUnits.forEach(unit => {
-              const conversionUnitStock = productStocks.find(s => s.unit === unit.name);
-              priceObj.units.push({
-                unitName: unit.name,
-                quantity: conversionUnitStock ? conversionUnitStock.quantity : 0,
-                price: p.prices.find(price => price.unitName === unit.name)?.price || 0,
-                conversionValue: unit.conversionValue
-              });
-            });
-  
-            prices.push(priceObj);
-          }
-        });
+        }
       });
-  
-      if (prices.length === 0) {
-        return res.status(404).json({ success: false, message: 'Không tìm thấy giá cho sản phẩm nào trong các bảng giá.' });
+    });
+
+    // Xử lý các sản phẩm không có trong bảng giá nào
+    products.forEach(product => {
+      if (!prices.some(price => price.productId.toString() === product._id.toString())) {
+        const productStocks = stocks.filter(s => s.productId.toString() === product._id.toString());
+
+        const priceObj = {
+          productId: product._id,
+          image: product.image,
+          description: product.description,
+          productName: product.name,
+          category: product.category ? product.category.name : null,
+          supplier: product.supplier ? product.supplier.name : null,
+          units: []
+        };
+
+        // Đơn vị cơ bản với giá bằng 0
+        const baseUnitStock = productStocks.find(s => s.unit === product.baseUnit.name);
+        priceObj.units.push({
+          unitName: product.baseUnit.name,
+          quantity: baseUnitStock ? baseUnitStock.quantity : 0,
+          price: 0,
+          conversionValue: product.baseUnit.conversionValue
+        });
+
+        // Đơn vị quy đổi với giá bằng 0
+        product.conversionUnits.forEach(unit => {
+          const conversionUnitStock = productStocks.find(s => s.unit === unit.name);
+          priceObj.units.push({
+            unitName: unit.name,
+            quantity: conversionUnitStock ? conversionUnitStock.quantity : 0,
+            price: 0,
+            conversionValue: unit.conversionValue
+          });
+        });
+
+        prices.push(priceObj);
       }
-  
-      res.status(200).json({
-        success: true,
-        message: 'Lấy giá sản phẩm thành công!',
-        prices
-      });
-    } catch (error) {
-      console.error("Error getting all active product prices:", error);
-      res.status(500).json({ success: false, message: 'Không thể lấy giá sản phẩm', error: error.message });
+    });
+
+    if (prices.length === 0) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy giá cho sản phẩm nào trong các bảng giá.' });
     }
-  };
-  
+
+    res.status(200).json({
+      success: true,
+      message: 'Lấy giá sản phẩm thành công!',
+      prices
+    });
+  } catch (error) {
+    console.error("Error getting all active product prices:", error);
+    res.status(500).json({ success: false, message: 'Không thể lấy giá sản phẩm', error: error.message });
+  }
+};

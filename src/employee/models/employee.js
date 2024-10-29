@@ -6,6 +6,8 @@ const employeeManagementSchema = new mongoose.Schema({
     ref: 'User', 
     required: true,
   },
+  MaNV: { 
+    type: String, required: true, unique: true },
   status: {
     type: String,
     enum: ['active', 'inactive'],

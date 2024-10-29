@@ -4,7 +4,7 @@ const voucherController = require("../controller/voucherController");
 
 // Lấy danh sách voucher theo chương trình khuyến mãi
 router.get("/promotion/:promotionProgramId", voucherController.getVoucherByPromotionProgramId);
-
+router.get("/promotion/list/active", voucherController.getAllActiveVouchers);
 // Tạo mới voucher
 router.post("/", voucherController.createVoucher);
 
