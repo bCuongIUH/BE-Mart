@@ -1,6 +1,7 @@
 const express = require('express');
 const { createPriceList, getAllPriceLists, addPricesToPriceList, getActiveProductPrices, updatePriceListStatus } = require('../controller/priceController');
 const { deletePriceList, updatePriceList } = require('../controller/priceCRUD.JS');
+const { deletePriceFromPriceList } = require('../controller/priceCRUD.JS');
 
 const router = express.Router();
 // const priceListController = require('../controllers/priceListController');
@@ -25,6 +26,6 @@ router.delete('/delete/:id', deletePriceList);
 
 
 router.post('/status', updatePriceListStatus);
-
+router.delete("/:priceListId/product/:productId/price/:priceId", deletePriceFromPriceList);
 
 module.exports = router;

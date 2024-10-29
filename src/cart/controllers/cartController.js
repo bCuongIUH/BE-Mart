@@ -54,6 +54,7 @@ exports.addToCart = async (req, res) => {
   }
 };
 
+//
 exports.addToCartOffline = async (req, res) => {
   try {
     const { productId, quantity } = req.body;

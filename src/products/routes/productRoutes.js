@@ -15,8 +15,8 @@ router.get('/pop', getAllProductsPOP);
 router.get('/category/:categoryId', getProductsByCategory);
 
 // // Cập nhật sản phẩm
-router.put('/itemproduct/:id', updateProduct);
-
+router.put('/:id', updateProduct);
+router.delete('/:id', deleteProduct);
 //cập nhật giá
 
 router.put('/status/:id', capnhatTrangThai);
@@ -24,7 +24,7 @@ router.put('/price/:id', capnhatGia);
 router.put('/priceRanges/:id', capnhatKhoangGia);
 router.put('/priceRanges/active/:id', updatePriceActive);
 
-// // Xóa sản phẩm
-router.delete('/:id', deleteProduct);
+
+
 
 module.exports = router;

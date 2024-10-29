@@ -1,6 +1,7 @@
 const Bill = require('../models/billModel');
 const Cart = require('../../cart/model/cart');
 const Product = require('../../products/models/product');
+const Stock = require('../../warehouse/models/Stock');
 
 // Tạo hóa đơn từ giỏ hàng đã mua
 //update ngày 10/7 
@@ -15,36 +16,57 @@ exports.createBill = async (req, res) => {
       });
     }
 
+    // Lấy giỏ hàng đang chờ thanh toán của người dùng
     const cart = await Cart.findOne({
       user: userId,
       status: "ChoThanhToan",
-    }).populate("items.product"); 
+    }).populate("items.product");
 
-    // Check if the cart exists and has items
+    // Kiểm tra nếu giỏ hàng tồn tại và có sản phẩm
     if (!cart || cart.items.length === 0) {
       return res.status(404).json({
         message: "Giỏ hàng trống hoặc không có sản phẩm nào để thanh toán",
       });
     }
 
-    // Calculate total amount
+    // Tính tổng tiền của hóa đơn
     const totalAmount = cart.items.reduce(
       (acc, item) => acc + (item.totalPrice || 0),
       0
     );
 
+    // Tạo hóa đơn mới
     const bill = new Bill({
       user: userId,
-      items: cart.items, 
+      items: cart.items,
       totalAmount,
       paymentMethod,
       purchaseType: "Online",
     });
 
-    await bill.save(); 
+    await bill.save();
 
-    // Update cart status
-    cart.status = "Shipped"; 
+    // Trừ số lượng tồn kho theo đơn vị tính của mỗi sản phẩm
+    for (const item of cart.items) {
+      const stock = await Stock.findOne({
+        productId: item.product._id,
+        unit: item.unit,
+      });
+
+      // Kiểm tra nếu tồn kho đủ số lượng
+      if (!stock || stock.quantity < item.quantity) {
+        return res.status(400).json({
+          message: `Sản phẩm ${item.product.name} không đủ số lượng tồn kho.`,
+        });
+      }
+
+      // Trừ số lượng trong tồn kho
+      stock.quantity -= item.quantity;
+      await stock.save();
+    }
+
+    // Cập nhật trạng thái của giỏ hàng sau khi thanh toán
+    cart.status = "Shipped";
     await cart.save();
 
     res.status(201).json({ message: "Hóa đơn đã được tạo thành công", bill });
@@ -53,7 +75,6 @@ exports.createBill = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
 
 
 // //mua hàng trục tiếp
