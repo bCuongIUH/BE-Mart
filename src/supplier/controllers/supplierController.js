@@ -1,34 +1,47 @@
 const Supplier = require('../models/supplier');
 
 // Tạo nhà cung cấp mới
+// Thêm mới nhà cung cấp
 exports.addSupplier = async (req, res) => {
-    try {
-      const { name, contactInfo, email, phoneNumber } = req.body;
-  
-      
-      if (!name) {
-        return res.status(400).json({ message: 'Tên nhà cung cấp là bắt buộc.' });
-      }
-  
-      const newSupplier = new Supplier({
-        name,
-        contactInfo,
-        email,
-        phoneNumber,
-      });
-  
-      await newSupplier.save();
-      res.status(201).json({ message: 'Nhà cung cấp đã được thêm thành công!', supplier: newSupplier });
-    } catch (error) {
-      res.status(500).json({ message: 'Lỗi khi thêm nhà cung cấp', error });
-    }
-  };
-  
+  try {
+    const { name, contactInfo, email, phoneNumber } = req.body;
 
-// Lấy tất cả nhà cung cấp
+    if (!name) {
+      return res.status(400).json({ message: 'Tên nhà cung cấp là bắt buộc.' });
+    }
+
+    // Kiểm tra trùng lặp
+    const existingSupplier = await Supplier.findOne({
+      $or: [{ name }, { email }, { phoneNumber }],
+    });
+
+    if (existingSupplier) {
+      return res.status(400).json({
+        message: 'Nhà cung cấp với tên, email hoặc số điện thoại đã tồn tại.',
+      });
+    }
+
+    const newSupplier = new Supplier({
+      name,
+      contactInfo,
+      email,
+      phoneNumber,
+    });
+
+    await newSupplier.save();
+    res.status(201).json({
+      message: 'Nhà cung cấp đã được thêm thành công!',
+      supplier: newSupplier,
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Lỗi khi thêm nhà cung cấp', error });
+  }
+};
+
+// Lấy tất cả nhà cung cấp chưa bị xóa
 exports.getAllSuppliers = async (req, res) => {
   try {
-    const suppliers = await Supplier.find();
+    const suppliers = await Supplier.find({ isDeleted: false }); // Lấy danh sách nhà cung cấp chưa bị xóa
     res.status(200).json(suppliers);
   } catch (error) {
     res.status(500).json({ message: 'Lỗi khi lấy danh sách nhà cung cấp', error });
@@ -38,7 +51,7 @@ exports.getAllSuppliers = async (req, res) => {
 // Lấy nhà cung cấp theo ID
 exports.getSupplierById = async (req, res) => {
   try {
-    const supplier = await Supplier.findById(req.params.id);
+    const supplier = await Supplier.findOne({ _id: req.params.id, isDeleted: false });
     if (!supplier) {
       return res.status(404).json({ message: 'Không tìm thấy nhà cung cấp' });
     }
@@ -52,28 +65,49 @@ exports.getSupplierById = async (req, res) => {
 exports.updateSupplier = async (req, res) => {
   try {
     const { name, contactInfo, email, phoneNumber } = req.body;
+
+    // Kiểm tra trùng lặp khi cập nhật
+    const existingSupplier = await Supplier.findOne({
+      $or: [{ name }, { email }, { phoneNumber }],
+      _id: { $ne: req.params.id }, // Loại bỏ nhà cung cấp hiện tại khỏi kiểm tra trùng lặp
+    });
+
+    if (existingSupplier) {
+      return res.status(400).json({
+        message: 'Tên, email hoặc số điện thoại đã tồn tại với một nhà cung cấp khác.',
+      });
+    }
+
     const updatedSupplier = await Supplier.findByIdAndUpdate(
       req.params.id,
       { name, contactInfo, email, phoneNumber },
       { new: true }
     );
+
     if (!updatedSupplier) {
       return res.status(404).json({ message: 'Không tìm thấy nhà cung cấp' });
     }
+
     res.status(200).json({ message: 'Cập nhật nhà cung cấp thành công', supplier: updatedSupplier });
   } catch (error) {
     res.status(500).json({ message: 'Lỗi khi cập nhật nhà cung cấp', error });
   }
 };
 
-// Xóa nhà cung cấp
+// Chuyển `isDeleted` thành true khi xóa
 exports.deleteSupplier = async (req, res) => {
   try {
-    const deletedSupplier = await Supplier.findByIdAndDelete(req.params.id);
-    if (!deletedSupplier) {
+    const supplier = await Supplier.findByIdAndUpdate(
+      req.params.id,
+      { isDeleted: true },
+      { new: true }
+    );
+
+    if (!supplier) {
       return res.status(404).json({ message: 'Không tìm thấy nhà cung cấp' });
     }
-    res.status(200).json({ message: 'Xóa nhà cung cấp thành công' });
+
+    res.status(200).json({ message: 'Nhà cung cấp đã được đánh dấu là đã xóa.' });
   } catch (error) {
     res.status(500).json({ message: 'Lỗi khi xóa nhà cung cấp', error });
   }
