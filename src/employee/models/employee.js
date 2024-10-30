@@ -18,9 +18,11 @@ const employeeManagementSchema = new mongoose.Schema({
     default: Date.now,
   },
  
-  address: {
-    type: String,
-    required: false, 
+  addressLines: {
+    houseNumber: { type: String, required: true },
+    ward: { type: String, required: true },
+    district: { type: String, required: true },
+    province: { type: String, required: true },
   },
 
   gender: {
@@ -39,7 +41,7 @@ const employeeManagementSchema = new mongoose.Schema({
   },
   email: {
     type: String,
-    required: true,
+    required: false,
   },
     fullName: {
         type: String,
@@ -52,6 +54,9 @@ const employeeManagementSchema = new mongoose.Schema({
   isDeleted: {
     type: Boolean,
     default: false,
+  },
+  oldEmail: {
+    type: String, 
   },
 });
 
