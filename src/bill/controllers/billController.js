@@ -208,7 +208,7 @@ exports.createDirectPurchaseBill = async (req, res) => {
 
     // Tính tổng tiền ban đầu của hóa đơn
     let totalAmount = items.reduce((acc, item) => acc + (item.currentPrice * item.quantity), 0);
-    let discount = 0; // Mức giảm giá sẽ được tính toán dựa trên voucher
+    let discount = 0; // Mức giảm giá sẽ được tính toán dựa trên voucher 
 
     // Kiểm tra và áp dụng voucher nếu có
     if (voucherCode) {
@@ -293,7 +293,7 @@ async function applyFixedDiscount(voucher, totalAmount) {
 
 // Hàm áp dụng voucher PercentageDiscount
 async function applyPercentageDiscount(voucher, totalAmount) {
-  const condition = await PercentageDiscountVoucher.findOne({ voucherId: voucher._id });
+  const condition = await PercentageDiscountVoucher.findOne({ voucherId: voucher._id }); 
 
   if (condition && totalAmount >= condition.conditions[0].minOrderValue) {
     const discount = (totalAmount * condition.conditions[0].discountPercentage) / 100;
