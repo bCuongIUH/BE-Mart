@@ -64,7 +64,7 @@ const billSchema = new mongoose.Schema({
     required: true 
   },
    createBy: { type: mongoose.Schema.Types.ObjectId, 
-    ref: 'EmployeeManagement', 
+    ref: 'User', 
     required: false  },
 });
 

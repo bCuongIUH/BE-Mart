@@ -10,17 +10,20 @@ exports.addSupplier = async (req, res) => {
       return res.status(400).json({ message: 'Tên nhà cung cấp là bắt buộc.' });
     }
 
-    // Kiểm tra trùng lặp
-    const existingSupplier = await Supplier.findOne({
-      $or: [{ name }, { email }, { phoneNumber }],
-    });
-
-    if (existingSupplier) {
-      return res.status(400).json({
-        message: 'Nhà cung cấp với tên, email hoặc số điện thoại đã tồn tại.',
-      });
+    // Kiểm tra trùng lặp cho từng trường riêng biệt
+    if (await Supplier.findOne({ name })) {
+      return res.status(400).json({ message: 'Tên nhà cung cấp đã tồn tại.' });
     }
 
+    if (email && (await Supplier.findOne({ email }))) {
+      return res.status(400).json({ message: 'Email nhà cung cấp đã tồn tại.' });
+    }
+
+    if (phoneNumber && (await Supplier.findOne({ phoneNumber }))) {
+      return res.status(400).json({ message: 'Số điện thoại nhà cung cấp đã tồn tại.' });
+    }
+
+    // Tạo nhà cung cấp mới nếu không có trùng lặp
     const newSupplier = new Supplier({
       name,
       contactInfo,
@@ -37,6 +40,7 @@ exports.addSupplier = async (req, res) => {
     res.status(500).json({ message: 'Lỗi khi thêm nhà cung cấp', error });
   }
 };
+
 
 // Lấy tất cả nhà cung cấp chưa bị xóa
 exports.getAllSuppliers = async (req, res) => {

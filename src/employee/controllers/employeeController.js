@@ -142,7 +142,7 @@ exports.verifyOTP = async (req, res) => {
 };
 
 
-// Lấy tất cả sản phẩm
+// Lấy tất cả nhân viên
 exports.getAllEmployee = async (req, res) => {
     try {
       const employees = await EmployeeManagement.find({ isDeleted: false });
@@ -153,6 +153,22 @@ exports.getAllEmployee = async (req, res) => {
     }
   };
   
+  exports.getEmployeeById = async (req, res) => {
+    try {
+      const employee = await EmployeeManagement.findOne({
+        employeeId: req.params.id, // ID của User trong EmployeeManagement
+        isDeleted: false
+      }).populate('employeeId'); // sử dụng populate để tham chiếu đầy đủ từ User
+  
+      if (!employee) {
+        return res.status(404).json({ message: 'Nhân viên không tồn tại' });
+      }
+  
+      res.status(200).json(employee);
+    } catch (error) {
+      res.status(500).json({ message: 'Lỗi khi lấy thông tin nhân viên', error });
+    }
+  };
 
   // Sửa thông tin nhân viên
   exports.updateEmployee = async (req, res) => {

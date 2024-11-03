@@ -26,6 +26,15 @@ const InvenStockmentSchema = new mongoose.Schema({
                 ref: 'Stock',
                 required: true
             },
+            productId: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'Product', 
+                required: true
+            },
+            unit: {
+                type: String,
+                required: true
+            },
             adjustmentType: {
                 type: String,
                 enum: ['increase', 'decrease'],
@@ -53,8 +62,6 @@ const InvenStockmentSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     }
-
-
 });
 
 const InvenStockment = mongoose.model('InvenStock', InvenStockmentSchema);

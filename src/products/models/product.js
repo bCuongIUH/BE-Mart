@@ -6,6 +6,7 @@ const UnitSchema = new mongoose.Schema({
     conversionValue: { type: Number, default: 1 },
     barcode: { type: String, unique: false, required: false },
     //image: { type: String }
+    isdeleted: { type: Boolean, default: false }
 }, {});
 
 
