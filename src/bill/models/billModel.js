@@ -6,6 +6,11 @@ const billSchema = new mongoose.Schema({
     ref: 'User', 
     required: false 
   },
+  customer: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'Customer' 
+  
+  },
   items: [
     {
       product: { 
@@ -64,7 +69,7 @@ const billSchema = new mongoose.Schema({
     required: true 
   },
    createBy: { type: mongoose.Schema.Types.ObjectId, 
-    ref: 'User', 
+    ref: 'EmployeeManagement', 
     required: false  },
 });
 

@@ -1,5 +1,5 @@
 const express = require('express');
-const { login,register, verifyOTP, getToken ,removeCookie,removeToken, forgotPassword, verifyForgotPasswordOTP, changePassword, getAllUsers,updateUserRole, checkToken, someProtectedRoute  } = require('../controllers/authController');
+const { login,register, verifyOTP, getToken ,removeCookie,removeToken, forgotPassword, verifyForgotPasswordOTP, changePassword, getAllUsers,updateUserRole, checkToken, someProtectedRoute, resendOTP  } = require('../controllers/authController');
 const { isAuthenticated, isAdmin } = require('../middleware/authMiddleware');
 
 const router = express.Router();
@@ -7,7 +7,7 @@ const router = express.Router();
 router.post('/login', login);
 router.post('/register', register);
 router.post('/verify-otp', verifyOTP);
-
+router.post('/resend-otp', resendOTP);
 // token
 router.get('/removeCookie', removeCookie);
 router.get('/removeToken', removeToken);

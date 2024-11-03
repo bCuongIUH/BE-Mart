@@ -131,9 +131,76 @@ exports.createBill = async (req, res) => {
 
 
 //
+// exports.createDirectPurchaseBill = async (req, res) => {
+//   try {
+//     const { paymentMethod, phoneNumber, items, createBy, voucherCode } = req.body;
+
+//     if (!items || items.length === 0) {
+//       return res.status(400).json({ message: 'Danh sách sản phẩm không hợp lệ' });
+//     }
+
+//     // Tính tổng tiền ban đầu của hóa đơn
+//     let totalAmount = items.reduce((acc, item) => acc + (item.currentPrice * item.quantity), 0);
+//     let discount = 0; // Mức giảm giá sẽ được tính toán dựa trên voucher
+
+//     // Kiểm tra và áp dụng voucher nếu có
+//     if (voucherCode) {
+//       const voucher = await Voucher.findOne({ code: voucherCode, isActive: true });
+//       if (!voucher) {
+//         return res.status(400).json({ message: 'Voucher không hợp lệ hoặc đã hết hạn.' });
+//       }
+
+//       // Tính mức giảm giá dựa trên loại voucher
+//       if (voucher.type === "BuyXGetY") {
+//         discount = await applyBuyXGetYDiscount(voucher, items);
+//       } else if (voucher.type === "FixedDiscount") {
+//         discount = await applyFixedDiscount(voucher, totalAmount);
+//       } else if (voucher.type === "PercentageDiscount") {
+//         discount = await applyPercentageDiscount(voucher, totalAmount);
+//       }
+
+//       // Điều chỉnh tổng tiền với mức giảm giá
+//       totalAmount -= discount;
+//     }
+
+//     // Tạo hóa đơn mới với thông tin đã áp dụng khuyến mãi
+//     const bill = new Bill({
+//       user: null, // Mua hàng trực tiếp không yêu cầu ID người dùng
+//       items,
+//       totalAmount,
+//       paymentMethod,
+//       phoneNumber: phoneNumber || '',
+//       status: 'Paid',
+//       purchaseType: 'Offline',
+//       createBy,
+//       discountAmount: discount, // Thêm mức giảm giá vào hóa đơn
+//     });
+
+//     await bill.save();
+
+//     // Kiểm tra và cập nhật tồn kho
+//     for (const item of items) {
+//       const stock = await Stock.findOne({ productId: item.product, unit: item.unit });
+
+//       if (!stock || stock.quantity < item.quantity) {
+//         return res.status(400).json({
+//           message: `Sản phẩm ${item.product} không đủ số lượng tồn kho cho đơn vị ${item.unit}.`
+//         });
+//       }
+
+//       stock.quantity -= item.quantity;
+//       await stock.save();
+//     }
+
+//     res.status(201).json({ message: 'Hóa đơn đã được tạo thành công', bill });
+//   } catch (error) {
+//     console.error("Lỗi:", error);
+//     res.status(500).json({ message: error.message });
+//   }
+// };
 exports.createDirectPurchaseBill = async (req, res) => {
   try {
-    const { paymentMethod, phoneNumber, items, createBy, voucherCode } = req.body;
+    const { paymentMethod, phoneNumber, items, createBy, voucherCode, customerId } = req.body;
 
     if (!items || items.length === 0) {
       return res.status(400).json({ message: 'Danh sách sản phẩm không hợp lệ' });
@@ -163,9 +230,9 @@ exports.createDirectPurchaseBill = async (req, res) => {
       totalAmount -= discount;
     }
 
-    // Tạo hóa đơn mới với thông tin đã áp dụng khuyến mãi
+    // Tạo hóa đơn mới với thông tin đã áp dụng khuyến mãi và liên kết khách hàng
     const bill = new Bill({
-      user: null, // Mua hàng trực tiếp không yêu cầu ID người dùng
+      customer: customerId || null, // Liên kết với khách hàng nếu có customerId
       items,
       totalAmount,
       paymentMethod,
@@ -173,7 +240,7 @@ exports.createDirectPurchaseBill = async (req, res) => {
       status: 'Paid',
       purchaseType: 'Offline',
       createBy,
-      discountAmount: discount, // Thêm mức giảm giá vào hóa đơn
+      discountAmount: discount,
     });
 
     await bill.save();

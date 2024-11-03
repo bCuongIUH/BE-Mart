@@ -11,7 +11,7 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  otp: String,
+  // otp: String,
   otpExpires: Date,
   isVerified: {
     type: Boolean,
@@ -30,11 +30,12 @@ const userSchema = new mongoose.Schema({
   phoneNumber: {
     type: String,
     required: true,
+    unique: true,
   },
-  address: { 
-    type: String,
-    required: false,
-  },
+  // address: { 
+  //   type: String,
+  //   required: false,
+  // },
 });
 
 // Hash password before saving

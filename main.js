@@ -20,6 +20,7 @@ const unitsCRUDRoutes = require('./src/units/routers/UnitCRUD')
 const stockRouter = require('./src/warehouse/routes/StockRouter');
 const employeeRouter = require('./src/employee/routers/employeeRouter');  
 const transactionRoutes = require('./src/warehouse/routes/TransactionRoutes');
+const customerRoutes = require('./src/customer/routers/customerRoutes');  
 dotenv.config();
 const app = express();
 const cron = require('node-cron');
@@ -53,6 +54,7 @@ app.use("/api/units/crud", unitsCRUDRoutes);
 app.use("/api/stock", stockRouter);
 app.use("/api/employees", employeeRouter);
 app.use("/api/transactions", transactionRoutes);
+app.use("/api/customers", customerRoutes);
 // Kết nối MongoDB
 mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => {
