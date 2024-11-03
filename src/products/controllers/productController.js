@@ -2,8 +2,7 @@ const mongoose = require('mongoose');
 const uploadImageToCloudinary = require('../../upload/uploadImage');
 const Category  = require('../models/category');
 const Product  = require('../models/product');
-const Unit = require('../../unit/models/Unit');
-const UnitLine = require('../../units/models/UnitLine');
+
 const Supplier = require('../../supplier/models/supplier')
 
 //thêm mới
@@ -91,66 +90,149 @@ exports.deleteProduct = async (req, res) => {
 };
 
 //cập nhật
+// exports.updateProduct = async (req, res) => {
+//   try {
+//     const { code, barcode, name, description, supplierId, categoryId, baseUnit, conversionUnits } = req.body;
+//     const product = await Product.findById(req.params.id);
+   
+//     if (!product) {
+//       return res.status(404).json({ message: 'Không tìm thấy sản phẩm' });
+//     }
+
+//     if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+//       return res.status(400).json({ message: 'Danh mục không hợp lệ' });
+//     }
+
+//     const category = await Category.findById(categoryId);
+//     if (!category) {
+//       return res.status(400).json({ message: 'Danh mục không tồn tại' });
+//     }
+
+//     if (!mongoose.Types.ObjectId.isValid(supplierId)) {
+//       return res.status(400).json({ message: 'Nhà cung cấp không hợp lệ22' });
+//     }
+
+//     const supplier = await Supplier.findById(supplierId);
+//     if (!supplier) {
+//       return res.status(400).json({ message: 'Nhà cung cấp không tồn tại' });
+//     }
+
+//     let imageUrl = product.image;
+//     if (req.file) {
+//       imageUrl = await uploadImageToCloudinary(req.file.path, 'product_images'); 
+//     }
+
+//     // Cập nhật thông tin baseUnit nếu có
+//     const updatedBaseUnit = baseUnit ? {
+//       name: baseUnit.name || product.baseUnit.name,
+//       conversionValue: baseUnit.conversionValue || product.baseUnit.conversionValue,
+//       barcode: baseUnit.barcode || product.baseUnit.barcode
+//     } : product.baseUnit;
+
+//     // Cập nhật danh sách conversionUnits nếu có
+//     const updatedConversionUnits = conversionUnits ? conversionUnits.map((unit, index) => ({
+//       name: unit.name || product.conversionUnits[index]?.name,
+//       conversionValue: unit.conversionValue || product.conversionUnits[index]?.conversionValue,
+//       barcode: unit.barcode || product.conversionUnits[index]?.barcode
+//     })) : product.conversionUnits;
+
+//     // Cập nhật sản phẩm
+//     const updatedProduct = await Product.findByIdAndUpdate(
+//       req.params.id,
+//       {
+//         code: code || product.code,
+//         barcode: barcode || product.barcode,
+//         name: name || product.name,
+//         description: description || product.description,
+//         supplier: supplierId || product.supplier, // Thêm dòng này
+//         category: categoryId || product.category,
+//         image: imageUrl,
+//         baseUnit: updatedBaseUnit,
+//         conversionUnits: updatedConversionUnits
+//       },
+//       { new: true }
+//     );
+
+//     res.status(200).json({ message: 'Cập nhật sản phẩm thành công', product: updatedProduct });
+//   } catch (error) {
+//     console.error('Lỗi khi cập nhật sản phẩm:', error);
+//     res.status(500).json({ message: 'Lỗi khi cập nhật sản phẩm', error: error.message });
+//   }
+// };
+
 exports.updateProduct = async (req, res) => {
   try {
-    const { code, barcode, name, description, categoryId, baseUnit, conversionUnits } = req.body;
+    const {
+      code,
+      barcode,
+      name,
+      description,
+      supplierId,
+      categoryId,
+      baseUnit,
+      conversionUnits,
+    } = req.body;
+    console.log('====================================');
+    console.log(req.body);
+    console.log('====================================');
+    // Kiểm tra sản phẩm có tồn tại không
     const product = await Product.findById(req.params.id);
-    
     if (!product) {
-      return res.status(404).json({ message: 'Không tìm thấy sản phẩm' });
+      return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
     }
 
+    // Kiểm tra ID danh mục và nhà cung cấp có hợp lệ không
     if (!mongoose.Types.ObjectId.isValid(categoryId)) {
-      return res.status(400).json({ message: 'Danh mục không hợp lệ' });
+      return res.status(400).json({ message: "Danh mục không hợp lệ" });
+    }
+    if (!mongoose.Types.ObjectId.isValid(supplierId)) {
+      return res.status(400).json({ message: "Nhà cung cấp không hợp lệ" });
     }
 
+    // Kiểm tra xem danh mục và nhà cung cấp có tồn tại không
     const category = await Category.findById(categoryId);
     if (!category) {
-      return res.status(400).json({ message: 'Danh mục không tồn tại' });
+      return res.status(400).json({ message: "Danh mục không tồn tại" });
+    }
+    const supplier = await Supplier.findById(supplierId);
+    if (!supplier) {
+      return res.status(400).json({ message: "Nhà cung cấp không tồn tại" });
     }
 
+    // Xử lý ảnh nếu có tải lên
     let imageUrl = product.image;
     if (req.file) {
-      imageUrl = await uploadImageToCloudinary(req.file.path, 'product_images'); 
+      imageUrl = await uploadImageToCloudinary(req.file.path, "product_images");
     }
 
-    // Cập nhật thông tin baseUnit nếu có
-    const updatedBaseUnit = baseUnit ? {
-      name: baseUnit.name || product.baseUnit.name,
-      conversionValue: baseUnit.conversionValue || product.baseUnit.conversionValue,
-      barcode: baseUnit.barcode || product.baseUnit.barcode
-    } : product.baseUnit;
-
-    // Cập nhật danh sách conversionUnits nếu có
-    const updatedConversionUnits = conversionUnits ? conversionUnits.map((unit, index) => ({
-      name: unit.name || product.conversionUnits[index]?.name,
-      conversionValue: unit.conversionValue || product.conversionUnits[index]?.conversionValue,
-      barcode: unit.barcode || product.conversionUnits[index]?.barcode
-    })) : product.conversionUnits;
+    // Chuẩn bị dữ liệu cập nhật
+    const updatedData = {
+      code: code || product.code,
+      barcode: barcode || product.barcode,
+      name: name || product.name,
+      description: description || product.description,
+      supplier: supplierId || product.supplier,
+      category: categoryId || product.category,
+      image: imageUrl,
+      baseUnit: {
+        name: baseUnit?.name || product.baseUnit.name,
+        conversionValue: baseUnit?.conversionValue || product.baseUnit.conversionValue,
+        barcode: baseUnit?.barcode || product.baseUnit.barcode,
+      },
+      conversionUnits: conversionUnits || product.conversionUnits,
+    };
 
     // Cập nhật sản phẩm
-    const updatedProduct = await Product.findByIdAndUpdate(
-      req.params.id,
-      {
-        code: code || product.code,
-        barcode: barcode || product.barcode,
-        name: name || product.name,
-        description: description || product.description,
-        category: categoryId || product.category,
-        image: imageUrl,
-        baseUnit: updatedBaseUnit,
-        conversionUnits: updatedConversionUnits
-      },
-      { new: true }
-    );
+    const updatedProduct = await Product.findByIdAndUpdate(req.params.id, updatedData, {
+      new: true,
+    });
 
-    res.status(200).json({ message: 'Cập nhật sản phẩm thành công', product: updatedProduct });
+    res.status(200).json({ message: "Cập nhật sản phẩm thành công", product: updatedProduct });
   } catch (error) {
-    console.error('Lỗi khi cập nhật sản phẩm:', error);
-    res.status(500).json({ message: 'Lỗi khi cập nhật sản phẩm', error: error.message });
+    console.error("Lỗi khi cập nhật sản phẩm:", error);
+    res.status(500).json({ message: "Lỗi khi cập nhật sản phẩm", error: error.message });
   }
 };
-
 // Lấy tất cả sản phẩm
 exports.getAllProducts = async (req, res) => {
   try {

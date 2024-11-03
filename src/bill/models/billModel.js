@@ -45,7 +45,11 @@ const billSchema = new mongoose.Schema({
     enum: ['Pending', 'Paid', 'Canceled'], 
     default: 'Pending' 
   },
-
+  // changeAmount: { // Tiền thừa trả lại khách
+  //   type: Number,
+  //   required: false,
+  //   default: 0
+  // },
    appliedVoucher: { // ID chương trình khuyến mãi áp dụng
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Voucher',

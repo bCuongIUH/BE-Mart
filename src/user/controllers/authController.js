@@ -20,14 +20,10 @@ exports.login = async (req, res) => {
       return res.status(400).json({ message: 'Người dùng không tồn tại' });
     }
 
-    // In ra mật khẩu để kiểm tra
-    console.log("Mật khẩu nhập:", password);
-    console.log("Mật khẩu mã hóa:", user.password);
+
 
     const isMatch = await bcrypt.compare(password, user.password);
 
-    // In ra kết quả so sánh
-    console.log("Kết quả so sánh:", isMatch);
 
     if (!isMatch) {
       return res.status(400).json({ message: 'Mật khẩu không chính xác' });

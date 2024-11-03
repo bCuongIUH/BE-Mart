@@ -75,7 +75,7 @@ exports.createInventoryAudit = async (req, res) => {
     try {
         const { code, description, auditDate, auditedBy, adjustments } = req.body;
 
-        console.log("Received data:", JSON.stringify(req.body, null, 2));
+        // console.log("Received data:", JSON.stringify(req.body, null, 2));
 
         const existingAudit = await InvenStockment.findOne({ code });
         if (existingAudit) {

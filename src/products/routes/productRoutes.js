@@ -1,5 +1,7 @@
 
 const express = require('express');
+const multer = require('multer');
+const uploads = multer();
 const router = express.Router();
 const {  getAllProducts, getProductByCode, updateProduct, deleteProduct,createProduct,nhapHang, getAllProductsPOP, getProductsByCategory} = require('../controllers/productController');
 const upload = require('../../config/multerConfig');
@@ -15,7 +17,7 @@ router.get('/pop', getAllProductsPOP);
 router.get('/category/:categoryId', getProductsByCategory);
 
 // // Cập nhật sản phẩm
-router.put('/:id', updateProduct);
+router.put('/update/:id', upload.single('image'), updateProduct);
 router.delete('/:id', deleteProduct);
 //cập nhật giá
 

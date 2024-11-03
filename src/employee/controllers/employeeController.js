@@ -156,7 +156,7 @@ exports.getAllEmployee = async (req, res) => {
   exports.getEmployeeById = async (req, res) => {
     try {
       const employee = await EmployeeManagement.findOne({
-        employeeId: req.params.id, // ID của User trong EmployeeManagement
+        employeeId: req.params.id, 
         isDeleted: false
       }).populate('employeeId'); // sử dụng populate để tham chiếu đầy đủ từ User
   

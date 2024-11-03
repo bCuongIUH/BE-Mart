@@ -6,6 +6,7 @@ const Voucher = require('../../promotion/models/Voucher');
 const FixedDiscountVoucher = require('../../promotion/models/FixedDiscountVoucher');
 const PercentageDiscountVoucher = require('../../promotion/models/PercentageDiscountVoucher');
 const BuyXGetYVoucher = require('../../promotion/models/BuyXGetYVoucher');
+const Transaction = require('../../warehouse/models/Transaction');
 
 // Tạo hóa đơn từ giỏ hàng đã mua
 //update ngày 10/7 
@@ -206,18 +207,15 @@ exports.createDirectPurchaseBill = async (req, res) => {
       return res.status(400).json({ message: 'Danh sách sản phẩm không hợp lệ' });
     }
 
-    // Tính tổng tiền ban đầu của hóa đơn
     let totalAmount = items.reduce((acc, item) => acc + (item.currentPrice * item.quantity), 0);
-    let discount = 0; // Mức giảm giá sẽ được tính toán dựa trên voucher 
+    let discount = 0;
 
-    // Kiểm tra và áp dụng voucher nếu có
     if (voucherCode) {
       const voucher = await Voucher.findOne({ code: voucherCode, isActive: true });
       if (!voucher) {
         return res.status(400).json({ message: 'Voucher không hợp lệ hoặc đã hết hạn.' });
       }
 
-      // Tính mức giảm giá dựa trên loại voucher
       if (voucher.type === "BuyXGetY") {
         discount = await applyBuyXGetYDiscount(voucher, items);
       } else if (voucher.type === "FixedDiscount") {
@@ -226,13 +224,11 @@ exports.createDirectPurchaseBill = async (req, res) => {
         discount = await applyPercentageDiscount(voucher, totalAmount);
       }
 
-      // Điều chỉnh tổng tiền với mức giảm giá
       totalAmount -= discount;
     }
 
-    // Tạo hóa đơn mới với thông tin đã áp dụng khuyến mãi và liên kết khách hàng
     const bill = new Bill({
-      customer: customerId || null, // Liên kết với khách hàng nếu có customerId
+      customer: customerId || null,
       items,
       totalAmount,
       paymentMethod,
@@ -245,7 +241,6 @@ exports.createDirectPurchaseBill = async (req, res) => {
 
     await bill.save();
 
-    // Kiểm tra và cập nhật tồn kho
     for (const item of items) {
       const stock = await Stock.findOne({ productId: item.product, unit: item.unit });
 
@@ -257,6 +252,18 @@ exports.createDirectPurchaseBill = async (req, res) => {
 
       stock.quantity -= item.quantity;
       await stock.save();
+
+      // Ghi lại giao dịch vào bảng Transaction với transactionType là 'ban'
+      const transaction = new Transaction({
+        productId: item.product,
+        transactionType: 'ban',
+        quantity: item.quantity,
+        unit: item.unit,
+        date: new Date(),
+        isdeleted: false,
+      });
+
+      await transaction.save();
     }
 
     res.status(201).json({ message: 'Hóa đơn đã được tạo thành công', bill });
