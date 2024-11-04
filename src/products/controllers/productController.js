@@ -2,7 +2,6 @@ const mongoose = require('mongoose');
 const uploadImageToCloudinary = require('../../upload/uploadImage');
 const Category  = require('../models/category');
 const Product  = require('../models/product');
-
 const Supplier = require('../../supplier/models/supplier')
 
 //thêm mới
