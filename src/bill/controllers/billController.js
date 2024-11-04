@@ -237,6 +237,7 @@ exports.createDirectPurchaseBill = async (req, res) => {
       purchaseType: 'Offline',
       createBy,
       discountAmount: discount,
+    
     });
 
     await bill.save();

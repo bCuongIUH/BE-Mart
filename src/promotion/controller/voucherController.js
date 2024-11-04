@@ -78,10 +78,18 @@ exports.createVoucher = async (req, res) => {
       case "BuyXGetY":
         const buyXGetY = new BuyXGetY({
           voucherId: newVoucher._id,
-          conditions, // conditions sẽ bao gồm productXId, quantityX, productYId, quantityY
+          conditions: {
+            productXId: conditions.productXId,
+            quantityX: conditions.quantityX,
+            unitX: conditions.unitX,
+            productYId: conditions.productYId,
+            quantityY: conditions.quantityY,
+            unitY: conditions.unitY,
+          },
         });
         await buyXGetY.save();
         break;
+
 
       case "FixedDiscount":
         const fixedDiscount = new FixedDiscount({
@@ -142,7 +150,14 @@ exports.updateVoucher = async (req, res) => {
       case "BuyXGetY":
         const buyXGetY = new BuyXGetY({
           voucherId: updatedVoucher._id,
-          conditions,
+          conditions: {
+            productXId: conditions.productXId,
+            quantityX: conditions.quantityX,
+            unitX: conditions.unitX,
+            productYId: conditions.productYId,
+            quantityY: conditions.quantityY,
+            unitY: conditions.unitY,
+          },
         });
         await buyXGetY.save();
         break;

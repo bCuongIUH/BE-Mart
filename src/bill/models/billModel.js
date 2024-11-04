@@ -50,6 +50,12 @@ const billSchema = new mongoose.Schema({
   //   required: false,
   //   default: 0
   // },
+
+  discountAmount: { // Tiền giảm giá
+    type: Number,
+    required: false,
+    default: 0
+  },
    appliedVoucher: { // ID chương trình khuyến mãi áp dụng
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Voucher',
