@@ -171,9 +171,7 @@ exports.updateProduct = async (req, res) => {
       baseUnit,
       conversionUnits,
     } = req.body;
-    console.log('====================================');
-    console.log(req.body);
-    console.log('====================================');
+ 
     // Kiểm tra sản phẩm có tồn tại không
     const product = await Product.findById(req.params.id);
     if (!product) {

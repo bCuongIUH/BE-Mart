@@ -12,8 +12,9 @@ exports.getVoucherByPromotionProgramId = async (req, res) => {
 
     // Lấy danh sách voucher theo chương trình khuyến mãi
     const vouchers = await Voucher.find({
-      isActive: true,
+      // isActive: true,
       promotionProgram: promotionProgramId,
+      isDeleted: false,
       
     });
 
@@ -67,7 +68,7 @@ exports.createVoucher = async (req, res) => {
       code,
       promotionProgram: promotionProgramId,
       type,
-      isActive,
+      isActive : false,
     });
 
     await newVoucher.save();
@@ -85,6 +86,7 @@ exports.createVoucher = async (req, res) => {
       case "FixedDiscount":
         const fixedDiscount = new FixedDiscount({
           voucherId: newVoucher._id,
+          // conditions,
           conditions,
         });
         await fixedDiscount.save();
@@ -180,11 +182,14 @@ exports.deleteVoucher = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const deletedVoucher = await Voucher.findByIdAndDelete(id);
+    const deletedVoucher = await Voucher.findById(id);
 
     if (!deletedVoucher) {
       return res.status(404).json({ error: "Không tìm thấy voucher" });
     }
+    deletedVoucher.isDeleted = true;
+    await deletedVoucher.save();
+
 
     res.status(200).json({ message: "Xóa voucher thành công" });
   } catch (error) {
@@ -231,6 +236,7 @@ exports.getAllActiveVouchers = async (req, res) => {
     // Lấy các chương trình khuyến mãi đang hoạt động với ObjectId hợp lệ
     const activePromotions = await PromotionProgram.find({
       isActive: true, 
+      isDeleted: false,
       startDate: { $lte: currentDate },
       endDate: { $gte: currentDate },
     });

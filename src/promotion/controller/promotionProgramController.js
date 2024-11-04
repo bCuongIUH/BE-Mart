@@ -10,7 +10,7 @@ exports.createPromotionProgram = async (req, res) => {
       description,
       startDate,
       endDate,
-      isActive,
+      isActive : false,
     });
 
     await promotionProgram.save();
@@ -32,9 +32,11 @@ exports.getActivePromotionPrograms = async (req, res) => {
     
     // Lấy danh sách chương trình khuyến mãi đang hoạt động
     const activePromotions = await PromotionProgram.find({
+      isDeleted: false,
       isActive: true,
       startDate: { $lte: today },
       endDate: { $gte: today },
+    
     });
 
     res.status(200).json(activePromotions);
@@ -87,20 +89,19 @@ exports.deletePromotionProgram = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const promotionProgram = await PromotionProgram.findByIdAndDelete(id);
+    // Cập nhật isDelete thành true thay vì xóa
+    const promotionProgram = await PromotionProgram.findById(id);
 
     if (!promotionProgram) {
-      return res
-        .status(404)
-        .json({ message: "Không tìm thấy chương trình khuyến mãi" });
+      return res.status(404).json({ message: "Không tìm thấy chương trình khuyến mãi" });
     }
+    promotionProgram.isDeleted = true;
+    await promotionProgram.save();
 
-    res
-      .status(200)
-      .json({ message: "Chương trình khuyến mãi đã được xóa thành công" });
+    res.status(200).json({ message: "Chương trình khuyến mãi đã được đánh dấu là xóa" });
   } catch (error) {
     res.status(500).json({
-      error: "Có lỗi xảy ra khi xóa chương trình khuyến mãi",
+      error: "Có lỗi xảy ra khi cập nhật trạng thái xóa cho chương trình khuyến mãi",
       details: error.message,
     });
   }
@@ -110,7 +111,7 @@ exports.deletePromotionProgram = async (req, res) => {
 exports.getAllPromotionPrograms = async (req, res) => {
   const currentDate = new Date();
   try {
-    const promotionPrograms = await PromotionProgram.find();
+    const promotionPrograms = await PromotionProgram.find({ isDeleted: false });
     res.status(200).json(promotionPrograms);
   } catch (error) {
     res.status(500).json({
