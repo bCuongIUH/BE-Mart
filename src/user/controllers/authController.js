@@ -126,7 +126,7 @@ exports.register = async (req, res) => {
     // Kiểm tra xem email đã tồn tại trong User hay chưa
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ message: 'Email đã được sử dụng cho một tài khoản đã xác minh' });
+      return res.status(400).json({ message: 'Email đã được sử dụng' });
     }
 
     // Kiểm tra xem email đã tồn tại trong OTP chưa
@@ -137,7 +137,7 @@ exports.register = async (req, res) => {
  // Kiểm tra xem số điện thoại đã tồn tại trong User hay chưa
  const existingUserByPhone = await User.findOne({ phoneNumber });
  if (existingUserByPhone) {
-   return res.status(400).json({ message: 'Số điện thoại đã được sử dụng cho một tài khoản đã xác minh' });
+   return res.status(400).json({ message: 'Số điện thoại đã được sử dụng' });
  }
     // Tạo mã OTP và thời gian hết hạn
     const otp = generateOTP();
@@ -162,6 +162,62 @@ exports.register = async (req, res) => {
     return res.status(500).json({ message: 'Có lỗi xảy ra trong quá trình đăng ký' });
   }
 };
+// exports.verifyOTP = async (req, res) => {
+//   const { email, otp } = req.body;
+
+//   try {
+//     const otpRecord = await OTP.findOne({ email, otp });
+//     if (!otpRecord) {
+//       return res.status(400).json({ message: 'OTP không hợp lệ' });
+//     }
+
+//     if (otpRecord.otpExpires < Date.now()) {
+//       await OTP.deleteOne({ email, otp }); // Xóa OTP nếu đã hết hạn
+//       return res.status(400).json({ message: 'OTP đã hết hạn' });
+//     }
+
+//     // Kiểm tra nếu người dùng đã tồn tại trong hệ thống
+//     const existingUser = await User.findOne({ email });
+//     if (existingUser) {
+//       return res.status(400).json({ message: 'Email đã được đăng ký' });
+//     }
+
+//     // Lấy thông tin tạm thời từ OTP
+//     const { email: tempEmail, password, fullName, phoneNumber } = otpRecord.tempData || {};
+
+//     // Tạo bản ghi User để quản lý đăng nhập
+//     const user = new User({ email: tempEmail, password, fullName, phoneNumber, isVerified: true });
+//     await user.save();
+
+//     // Tạo bản ghi Customer với các trường mặc định cho thông tin còn thiếu
+//     const customer = new Customer({
+//       email: tempEmail,
+//       fullName,
+//       phoneNumber,
+//       joinDate: Date.now(),
+//       dateOfBirth: null,  // Mặc định là null nếu chưa có
+//       addressLines: {
+//         houseNumber: '',
+//         ward: '',
+//         district: '',
+//         province: ''
+//       }
+//     });
+//     await customer.save();
+
+//     // Xóa OTP sau khi xác minh thành công
+//     await OTP.deleteOne({ email: tempEmail });
+
+//     // Tạo token JWT cho người dùng
+//     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+//     res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production' });
+
+//     return res.status(200).json({ token, message: 'Xác minh thành công' });
+//   } catch (error) {
+//     console.error("Lỗi xác minh OTP:", error);
+//     return res.status(500).json({ message: 'Có lỗi xảy ra trong quá trình xác minh OTP' });
+//   }
+// };
 exports.verifyOTP = async (req, res) => {
   const { email, otp } = req.body;
 
@@ -172,30 +228,33 @@ exports.verifyOTP = async (req, res) => {
     }
 
     if (otpRecord.otpExpires < Date.now()) {
-      await OTP.deleteOne({ email, otp }); // Xóa OTP nếu đã hết hạn
+      await OTP.deleteOne({ email, otp });
       return res.status(400).json({ message: 'OTP đã hết hạn' });
     }
 
-    // Kiểm tra nếu người dùng đã tồn tại trong hệ thống
+    // Kiểm tra nếu người dùng đã tồn tại
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: 'Email đã được đăng ký' });
     }
 
-    // Lấy thông tin tạm thời từ OTP
-    const { email: tempEmail, password, fullName, phoneNumber } = otpRecord.tempData || {};
+    // Xác minh thành công và tạo tài khoản cho người dùng
+    const { tempData } = otpRecord;
+    if (!tempData) {
+      return res.status(400).json({ message: 'Dữ liệu tạm thời không hợp lệ' });
+    }
 
-    // Tạo bản ghi User để quản lý đăng nhập
+    const { email: tempEmail, password, fullName, phoneNumber } = tempData;
+
     const user = new User({ email: tempEmail, password, fullName, phoneNumber, isVerified: true });
     await user.save();
 
-    // Tạo bản ghi Customer với các trường mặc định cho thông tin còn thiếu
     const customer = new Customer({
       email: tempEmail,
       fullName,
       phoneNumber,
       joinDate: Date.now(),
-      dateOfBirth: null,  // Mặc định là null nếu chưa có
+      dateOfBirth: null,
       addressLines: {
         houseNumber: '',
         ward: '',
@@ -205,10 +264,8 @@ exports.verifyOTP = async (req, res) => {
     });
     await customer.save();
 
-    // Xóa OTP sau khi xác minh thành công
     await OTP.deleteOne({ email: tempEmail });
 
-    // Tạo token JWT cho người dùng
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
     res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production' });
 
@@ -218,28 +275,35 @@ exports.verifyOTP = async (req, res) => {
     return res.status(500).json({ message: 'Có lỗi xảy ra trong quá trình xác minh OTP' });
   }
 };
+
+// resendOTP Controller
 exports.resendOTP = async (req, res) => {
   const { email } = req.body;
 
   try {
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(400).json({ message: 'Người dùng không tồn tại' });
+    // Tìm bản ghi OTP dựa trên email
+    const existingOtpRecord = await OTP.findOne({ email });
+    if (!existingOtpRecord) {
+      return res.status(400).json({ message: 'Người dùng chưa yêu cầu mã OTP trước đó' });
     }
 
-    // Xoá OTP cũ nếu đã tồn tại và tạo mã mới
-    await OTP.deleteOne({ email });
-
+    // Cập nhật OTP mới và giữ lại thông tin tạm thời (`tempData`)
     const newOtp = generateOTP();
-    const otpExpires = Date.now() + 10 * 60 * 1000;
+    const otpExpires = Date.now() + 10 * 60 * 1000; // 10 phút
 
-    const otpRecord = new OTP({ email, otp: newOtp, otpExpires });
-    await otpRecord.save();
+    // Cập nhật mã OTP và thời hạn, giữ nguyên `tempData`
+    existingOtpRecord.otp = newOtp;
+    existingOtpRecord.otpExpires = otpExpires;
 
+    // Lưu lại bản ghi OTP đã cập nhật
+    await existingOtpRecord.save();
+
+    // Gửi email với mã OTP mới
     await sendEmail(email, 'Xác minh OTP', `Mã OTP của bạn là: ${newOtp}`);
 
     return res.status(200).json({ message: 'Đã gửi lại OTP tới email của bạn' });
   } catch (error) {
+    console.error("Lỗi khi gửi lại OTP:", error);
     return res.status(500).json({ message: 'Có lỗi xảy ra trong quá trình gửi lại OTP' });
   }
 };
