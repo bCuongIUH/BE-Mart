@@ -1,5 +1,5 @@
 const express = require('express');
-const { login,register, verifyOTP, getToken ,removeCookie,removeToken, forgotPassword, verifyForgotPasswordOTP, changePassword, getAllUsers,updateUserRole, checkToken, someProtectedRoute, resendOTP  } = require('../controllers/authController');
+const { login,register, verifyOTP, getToken ,removeCookie,removeToken, forgotPassword, verifyForgotPasswordOTP, changePassword, getAllUsers,updateUserRole, checkToken, someProtectedRoute, resendOTP, resetPassword  } = require('../controllers/authController');
 const { isAuthenticated, isAdmin } = require('../middleware/authMiddleware');
 
 const router = express.Router();
@@ -14,8 +14,9 @@ router.get('/removeToken', removeToken);
 router.get('/getToken', getToken);
 //mật khẩu 
 router.post('/forgot-password', forgotPassword); // chưa xong
-// Route để xác minh OTP và lấy token đặt lại mật khẩu
-router.post('/verify-forgot-password-otp', verifyForgotPasswordOTP);
+
+router.post('/password-otp', verifyForgotPasswordOTP);
+router.post('/resetPassword', resetPassword); 
 
 // Route để đổi mật khẩu
 router.post('/change-password', changePassword); //chưa xong

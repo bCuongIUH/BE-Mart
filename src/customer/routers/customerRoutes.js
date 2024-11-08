@@ -2,8 +2,8 @@ const express = require('express');
 const router = express.Router();
 const customerController = require('../controllers/CustomerController');
 
-// Endpoint lấy toàn bộ danh sách khách hàng
-router.get('/', customerController.getAllCustomers);
 
+router.get('/', customerController.getAllCustomers);
+router.put('/:id', customerController.updateCustomer);
 
 module.exports = router;

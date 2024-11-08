@@ -1,12 +1,12 @@
 const express = require('express');
-const { addToCart, getCart, removeProductFromCart,updateCart, getCartShipper, getCartDamua ,getCartHoanTra, getAllCarts, getAllCartsExceptPending} = require('../controllers/cartController');
+const {getCart, removeProductFromCart,updateCart, getCartShipper, getCartDamua ,getCartHoanTra, getAllCarts, getAllCartsExceptPending, addToCart} = require('../controllers/cartController');
 const { isAdmin,isAuthenticated } = require('../../user/middleware/authMiddleware');
 
 
 const router = express.Router();
 
 // Thêm sản phẩm vào giỏ hàng
-router.post('/add',addToCart);
+router.post('/addtocart',addToCart);
 
 // Lấy giỏ hàng của người dùng theo trạng thái
 router.get('/', getCart); // thằng nào cx lấy dc , ko ràng buộc

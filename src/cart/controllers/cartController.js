@@ -6,15 +6,15 @@ const PriceList = require("../../priceList/model/priceModels");
 
 exports.addToCart = async (req, res) => {
   try {
-    const { userId, productId, quantity, unit, price } = req.body;
+    const { CustomerId, productId, quantity, unit, price } = req.body;
 
     // Tìm giỏ hàng hiện tại
-    let cart = await Cart.findOne({ user: userId, status: "ChoThanhToan" });
+    let cart = await Cart.findOne({ customer: CustomerId, status: "ChoThanhToan" });
 
     // Nếu không có giỏ hàng, tạo mới
     if (!cart) {
       cart = new Cart({
-        user: userId,
+        customer: CustomerId,
         items: [{
           product: productId,
           quantity,
@@ -53,6 +53,7 @@ exports.addToCart = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
 
 //
 exports.addToCartOffline = async (req, res) => {

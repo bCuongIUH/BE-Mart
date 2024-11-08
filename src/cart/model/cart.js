@@ -28,9 +28,9 @@ const CartItemSchema = new mongoose.Schema({
 });
 
 const CartSchema = new mongoose.Schema({
-  user: {
+  customer: {  
     type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
+    ref: "Customer",
     required: true,
   },
   items: [CartItemSchema],
@@ -43,9 +43,15 @@ const CartSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  expiresAt: {  // Thêm trường expiresAt với TTL
+    type: Date,
+    default: () => Date.now() + 1 * 60 * 1000,  // 10 phút kể từ lúc tạo
+    index: { expires: '1m' },
+  },
   updatedAt: {
     type: Date,
   },
+
   admin: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
