@@ -10,195 +10,185 @@ const Transaction = require('../../warehouse/models/Transaction');
 
 // Tạo hóa đơn từ giỏ hàng đã mua
 //update ngày 10/7 
+// exports.createBill = async (req, res) => {
+//   try {
+//     const { userId, paymentMethod } = req.body;
+
+//     // Validate inputs
+//     if (!userId || !paymentMethod) {
+//       return res.status(400).json({
+//         message: "Thiếu thông tin người dùng hoặc phương thức thanh toán.",
+//       });
+//     }
+
+//     // Lấy giỏ hàng đang chờ thanh toán của người dùng
+//     const cart = await Cart.findOne({
+//       user: userId,
+//       status: "ChoThanhToan",
+//     }).populate("items.product");
+
+//     // Kiểm tra nếu giỏ hàng tồn tại và có sản phẩm
+//     if (!cart || cart.items.length === 0) {
+//       return res.status(404).json({
+//         message: "Giỏ hàng trống hoặc không có sản phẩm nào để thanh toán",
+//       });
+//     }
+
+//     // Tính tổng tiền của hóa đơn
+//     const totalAmount = cart.items.reduce(
+//       (acc, item) => acc + (item.totalPrice || 0),
+//       0
+//     );
+
+//     // Tạo hóa đơn mới
+//     const bill = new Bill({
+//       user: userId,
+//       items: cart.items,
+//       totalAmount,
+//       paymentMethod,
+//       purchaseType: "Online",
+//     });
+
+//     await bill.save();
+
+//     // Trừ số lượng tồn kho theo đơn vị tính của mỗi sản phẩm
+//     for (const item of cart.items) {
+//       const stock = await Stock.findOne({
+//         productId: item.product._id,
+//         unit: item.unit,
+//       });
+
+//       // Kiểm tra nếu tồn kho đủ số lượng
+//       if (!stock || stock.quantity < item.quantity) {
+//         return res.status(400).json({
+//           message: `Sản phẩm ${item.product.name} không đủ số lượng tồn kho.`,
+//         });
+//       }
+
+//       // Trừ số lượng trong tồn kho
+//       stock.quantity -= item.quantity;
+//       await stock.save();
+//     }
+
+//     // Cập nhật trạng thái của giỏ hàng sau khi thanh toán
+//     cart.status = "Shipped";
+//     await cart.save();
+
+//     res.status(201).json({ message: "Hóa đơn đã được tạo thành công", bill });
+//   } catch (error) {
+//     console.error("Lỗi:", error);
+//     res.status(500).json({ message: error.message });
+//   }
+// };
 exports.createBill = async (req, res) => {
   try {
-    const { userId, paymentMethod } = req.body;
+    const { customerId, paymentMethod, itemIds, voucherCode } = req.body;
 
-    // Validate inputs
-    if (!userId || !paymentMethod) {
+    if (!customerId || !paymentMethod || !itemIds || !Array.isArray(itemIds) || itemIds.length === 0) {
       return res.status(400).json({
-        message: "Thiếu thông tin người dùng hoặc phương thức thanh toán.",
+        message: "Thiếu thông tin khách hàng, phương thức thanh toán hoặc sản phẩm được chọn.",
       });
     }
 
-    // Lấy giỏ hàng đang chờ thanh toán của người dùng
-    const cart = await Cart.findOne({
-      user: userId,
-      status: "ChoThanhToan",
-    }).populate("items.product");
+    // Tìm giỏ hàng của khách hàng
+    const cart = await Cart.findOne({ customer: customerId }).populate("items.product");
 
-    // Kiểm tra nếu giỏ hàng tồn tại và có sản phẩm
     if (!cart || cart.items.length === 0) {
       return res.status(404).json({
-        message: "Giỏ hàng trống hoặc không có sản phẩm nào để thanh toán",
+        message: "Giỏ hàng trống hoặc không có sản phẩm nào để thanh toán.",
       });
     }
 
-    // Tính tổng tiền của hóa đơn
-    const totalAmount = cart.items.reduce(
+    // Lọc các sản phẩm có trạng thái "ChoThanhToan" và được chọn để thanh toán
+    const itemsToBill = cart.items.filter(
+      item => itemIds.includes(item._id.toString()) && item.status === "ChoThanhToan"
+    );
+
+    if (itemsToBill.length === 0) {
+      return res.status(400).json({
+        message: "Không có sản phẩm nào được chọn hoặc đã được thanh toán trước đó.",
+      });
+    }
+
+    // Tính tổng tiền của các sản phẩm đã chọn
+    let totalAmount = itemsToBill.reduce(
       (acc, item) => acc + (item.totalPrice || 0),
       0
     );
 
+    // Áp dụng voucher nếu có
+    let discount = 0;
+    if (voucherCode) {
+      const voucher = await Voucher.findOne({ code: voucherCode, isActive: true });
+      if (!voucher) {
+        return res.status(400).json({ message: "Voucher không hợp lệ hoặc đã hết hạn." });
+      }
+
+      if (voucher.type === "BuyXGetY") {
+        discount = await applyBuyXGetYDiscount(voucher, itemsToBill);
+      } else if (voucher.type === "FixedDiscount") {
+        discount = await applyFixedDiscount(voucher, totalAmount);
+      } else if (voucher.type === "PercentageDiscount") {
+        discount = await applyPercentageDiscount(voucher, totalAmount);
+      }
+
+      totalAmount -= discount;
+    }
+
     // Tạo hóa đơn mới
     const bill = new Bill({
-      user: userId,
-      items: cart.items,
+      customer: customerId,
+      items: itemsToBill,
       totalAmount,
       paymentMethod,
       purchaseType: "Online",
+      discountAmount: discount,
     });
 
     await bill.save();
 
-    // Trừ số lượng tồn kho theo đơn vị tính của mỗi sản phẩm
-    for (const item of cart.items) {
+    // Trừ số lượng tồn kho và ghi lại giao dịch cho từng sản phẩm
+    for (const item of itemsToBill) {
       const stock = await Stock.findOne({
         productId: item.product._id,
         unit: item.unit,
       });
 
-      // Kiểm tra nếu tồn kho đủ số lượng
       if (!stock || stock.quantity < item.quantity) {
         return res.status(400).json({
           message: `Sản phẩm ${item.product.name} không đủ số lượng tồn kho.`,
         });
       }
 
-      // Trừ số lượng trong tồn kho
       stock.quantity -= item.quantity;
       await stock.save();
+
+      const transaction = new Transaction({
+        productId: item.product._id,
+        transactionType: 'ban',
+        quantity: item.quantity,
+        unit: item.unit,
+        date: new Date(),
+        isDeleted: false,
+      });
+
+      await transaction.save();
     }
 
-    // Cập nhật trạng thái của giỏ hàng sau khi thanh toán
-    cart.status = "Shipped";
+    // Xóa các sản phẩm đã thanh toán khỏi giỏ hàng
+    cart.items = cart.items.filter(item => !itemIds.includes(item._id.toString()));
     await cart.save();
 
-    res.status(201).json({ message: "Hóa đơn đã được tạo thành công", bill });
+    res.status(201).json({ message: "Hóa đơn đã được tạo thành công và các sản phẩm đã được xóa khỏi giỏ hàng", bill });
   } catch (error) {
     console.error("Lỗi:", error);
     res.status(500).json({ message: error.message });
   }
 };
-// exports.createDirectPurchaseBill = async (req, res) => {
-//   try {
-//     const { paymentMethod, phoneNumber, items, createBy } = req.body;
-//     if (!items || items.length === 0) {
-//       return res.status(400).json({ message: 'Danh sách sản phẩm không hợp lệ' });
-//     }
-
-//     // Tính tổng tiền của hóa đơn dựa trên số lượng và giá của mỗi sản phẩm
-//     const totalAmount = items.reduce((acc, item) => acc + (item.currentPrice * item.quantity), 0);
-
-//     // Tạo hóa đơn mới cho giao dịch mua hàng trực tiếp
-//     const bill = new Bill({
-//       user: null, 
-//       items,
-//       totalAmount,
-//       paymentMethod,
-//       phoneNumber : phoneNumber || '', 
-//       status: 'Paid', 
-//       purchaseType: 'Offline',
-//       createBy
-//     });
-
-//     await bill.save();
-
-//     // Kiểm tra và cập nhật tồn kho cho từng sản phẩm
-//     for (const item of items) {
-//       const stock = await Stock.findOne({
-//         productId: item.product,
-//         unit: item.unit,
-//       });
-
-//       // Kiểm tra nếu tồn kho không đủ số lượng
-//       if (!stock || stock.quantity < item.quantity) {
-//         return res.status(400).json({
-//           message: `Sản phẩm ${item.product} không đủ số lượng tồn kho cho đơn vị ${item.unit}.`
-//         });
-//       }
-
-//       // Trừ số lượng sản phẩm trong tồn kho
-//       stock.quantity -= item.quantity;
-//       await stock.save();
-//     }
-
-//     res.status(201).json({ message: 'Hóa đơn đã được tạo thành công', bill });
-//   } catch (error) {
-//     console.error("Lỗi:", error);
-//     res.status(500).json({ message: error.message });
-//   }
-// };
 
 
 //
-// exports.createDirectPurchaseBill = async (req, res) => {
-//   try {
-//     const { paymentMethod, phoneNumber, items, createBy, voucherCode } = req.body;
 
-//     if (!items || items.length === 0) {
-//       return res.status(400).json({ message: 'Danh sách sản phẩm không hợp lệ' });
-//     }
-
-//     // Tính tổng tiền ban đầu của hóa đơn
-//     let totalAmount = items.reduce((acc, item) => acc + (item.currentPrice * item.quantity), 0);
-//     let discount = 0; // Mức giảm giá sẽ được tính toán dựa trên voucher
-
-//     // Kiểm tra và áp dụng voucher nếu có
-//     if (voucherCode) {
-//       const voucher = await Voucher.findOne({ code: voucherCode, isActive: true });
-//       if (!voucher) {
-//         return res.status(400).json({ message: 'Voucher không hợp lệ hoặc đã hết hạn.' });
-//       }
-
-//       // Tính mức giảm giá dựa trên loại voucher
-//       if (voucher.type === "BuyXGetY") {
-//         discount = await applyBuyXGetYDiscount(voucher, items);
-//       } else if (voucher.type === "FixedDiscount") {
-//         discount = await applyFixedDiscount(voucher, totalAmount);
-//       } else if (voucher.type === "PercentageDiscount") {
-//         discount = await applyPercentageDiscount(voucher, totalAmount);
-//       }
-
-//       // Điều chỉnh tổng tiền với mức giảm giá
-//       totalAmount -= discount;
-//     }
-
-//     // Tạo hóa đơn mới với thông tin đã áp dụng khuyến mãi
-//     const bill = new Bill({
-//       user: null, // Mua hàng trực tiếp không yêu cầu ID người dùng
-//       items,
-//       totalAmount,
-//       paymentMethod,
-//       phoneNumber: phoneNumber || '',
-//       status: 'Paid',
-//       purchaseType: 'Offline',
-//       createBy,
-//       discountAmount: discount, // Thêm mức giảm giá vào hóa đơn
-//     });
-
-//     await bill.save();
-
-//     // Kiểm tra và cập nhật tồn kho
-//     for (const item of items) {
-//       const stock = await Stock.findOne({ productId: item.product, unit: item.unit });
-
-//       if (!stock || stock.quantity < item.quantity) {
-//         return res.status(400).json({
-//           message: `Sản phẩm ${item.product} không đủ số lượng tồn kho cho đơn vị ${item.unit}.`
-//         });
-//       }
-
-//       stock.quantity -= item.quantity;
-//       await stock.save();
-//     }
-
-//     res.status(201).json({ message: 'Hóa đơn đã được tạo thành công', bill });
-//   } catch (error) {
-//     console.error("Lỗi:", error);
-//     res.status(500).json({ message: error.message });
-//   }
-// };
 exports.createDirectPurchaseBill = async (req, res) => {
   try {
     const { paymentMethod, phoneNumber, items, createBy, voucherCode, customerId } = req.body;

@@ -158,30 +158,34 @@ exports.updateCartStatus = async (req, res) => {
       return res.status(404).json({ success: false, message: "Sản phẩm không tồn tại trong giỏ hàng" });
     }
 
-    if (item.status === "ChoThanhToan") {
-      item.status = "ChuaChon";
-      await cart.save();
-
-      // Tăng lại số lượng trong stock khi cập nhật trạng thái về "ChuaChon"
-      const stock = await Stock.findOne({ productId: item.product, unit: item.unit });
-      if (stock) {
-        stock.quantity += item.quantity;
-        stock.lastUpdated = Date.now();
-        await stock.save();
-      }
-
-      return res.status(200).json({
-        success: true,
-        message: `Trạng thái sản phẩm đã được cập nhật thành "ChuaChon"`,
-        cart,
+    // Kiểm tra nếu trạng thái đã là "ChuaChon"
+    if (item.status !== "ChoThanhToan") {
+      return res.status(200).json({ 
+        success: false, 
+        message: "Trạng thái sản phẩm đã được cập nhật trước đó", 
       });
-    } else {
-      return res.status(400).json({ success: false, message: "Sản phẩm không ở trạng thái 'ChoThanhToan'" });
     }
+
+    item.status = "ChuaChon";
+    await cart.save();
+
+    const stock = await Stock.findOne({ productId: item.product, unit: item.unit });
+    if (stock) {
+      stock.quantity += item.quantity;
+      stock.lastUpdated = Date.now();
+      await stock.save();
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Trạng thái sản phẩm đã được cập nhật thành "ChuaChon"`,
+      cart,
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
 
 //
 exports.addToCartOffline = async (req, res) => {
