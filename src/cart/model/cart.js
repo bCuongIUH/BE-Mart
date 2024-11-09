@@ -23,7 +23,11 @@ const CartItemSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-
+  status: {
+    type: String,
+    enum: ["ChuaChon", "ChoThanhToan", "DaMua", "Shipped", "HoanTra"],
+    default: "ChoThanhToan",
+  }
 
 });
 
@@ -34,19 +38,14 @@ const CartSchema = new mongoose.Schema({
     required: true,
   },
   items: [CartItemSchema],
-  status: {
-    type: String,
-    enum: ["ChoThanhToan", "DaMua", "Shipped", "HoanTra"],
-    default: "ChoThanhToan",
-  },
+  // status: {
+  //   type: String,
+  //   enum: ["ChuaChon","ChoThanhToan", "DaMua", "Shipped", "HoanTra"],
+  //   default: "ChoThanhToan",
+  // },
   createdAt: {
     type: Date,
     default: Date.now,
-  },
-  expiresAt: {  // Thêm trường expiresAt với TTL
-    type: Date,
-    default: () => Date.now() + 1 * 60 * 1000,  // 10 phút kể từ lúc tạo
-    index: { expires: '1m' },
   },
   updatedAt: {
     type: Date,
@@ -67,3 +66,4 @@ CartSchema.pre("save", function (next) {
 
 const Cart = mongoose.model("Cart", CartSchema);
 module.exports = Cart;
+ 
