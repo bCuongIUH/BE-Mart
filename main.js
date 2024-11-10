@@ -25,7 +25,7 @@ const cron = require('node-cron');
 app.use(express.urlencoded({ extended: true }));
 // Cấu hình CORS
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://192.168.1.9:8081'],
+  origin: ['http://localhost:3000', 'http://192.168.1.8:8081'],
   credentials: true
 }));
 // app.use(cors()); 

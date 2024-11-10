@@ -42,8 +42,8 @@ const billSchema = new mongoose.Schema({
   },
   status: { 
     type: String, 
-    enum: ['Pending', 'Paid', 'Canceled'], 
-    default: 'Pending' 
+    enum: ['HoanThanh', 'HoanTra', 'Canceled'], 
+    default: 'HoanThanh' 
   },
   // changeAmount: { // Tiền thừa trả lại khách
   //   type: Number,

@@ -27,7 +27,8 @@ const CartItemSchema = new mongoose.Schema({
     type: String,
     enum: ["ChuaChon", "ChoThanhToan", "DaMua", "Shipped", "HoanTra"],
     default: "ChoThanhToan",
-  }
+  },
+  expiryTime: { type: Date },
 
 });
 
