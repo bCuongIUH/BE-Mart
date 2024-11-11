@@ -81,6 +81,16 @@ const billSchema = new mongoose.Schema({
    createBy: { type: mongoose.Schema.Types.ObjectId, 
     ref: 'EmployeeManagement', 
     required: false  },
+  
+    appliedVoucher: { 
+      type: mongoose.Schema.Types.ObjectId, 
+      ref: 'Voucher', 
+      required: false 
+    },
+    appliedVoucherCode: { 
+      type: String, 
+      required: false 
+    },
 });
 
 module.exports = mongoose.model('Bill', billSchema);
