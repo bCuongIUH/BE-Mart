@@ -24,16 +24,17 @@ dotenv.config();
 const app = express();
 const cron = require('node-cron');
 app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
+app.use(cookieParser());
 // Cấu hình CORS
 app.use(cors({
-  origin: ['http://localhost:3000','http://192.168.1.9:8081'],
+  origin: ['http://localhost:3000','http://192.168.1.8:8081'],
   credentials: true
 }));
 // app.use(cors()); 
 
-// Middleware
-app.use(express.json());
-app.use(cookieParser());
+
+
 
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);

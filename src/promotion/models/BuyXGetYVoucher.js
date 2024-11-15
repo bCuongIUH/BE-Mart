@@ -15,14 +15,14 @@ const buyXGetYSchema = new mongoose.Schema(
           required: true,
         },
         quantityX: { type: Number, required: true },
-        unitX: { type: String, required: true }, // Thêm đơn vị cho sản phẩm X
+        unitX: { type: String, required: true }, // lon , thùng.....
         productYId: {
           type: mongoose.Schema.Types.ObjectId,
           ref: "Product",
           required: true,
         },
         quantityY: { type: Number, required: true },
-        unitY: { type: String, required: true }, // Thêm đơn vị cho sản phẩm Y
+        unitY: { type: String, required: true },
       },
     ],
   },

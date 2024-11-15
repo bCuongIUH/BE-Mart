@@ -5,15 +5,19 @@ const mongoose = require("mongoose");
 
 const getStatistics = async (req, res) => {
   try {
-    const today = new Date();
+    // Khởi tạo thời gian hiện tại ở múi giờ Việt Nam (UTC+7)
+    const now = new Date();
+    const vietnamTimezoneOffset = 7 * 60 * 60 * 1000;
+
+    const today = new Date(now.getTime() + vietnamTimezoneOffset);
     today.setUTCHours(0, 0, 0, 0);
 
-    const yesterday = new Date(today);
-    yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+    const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
 
     const startOfMonth = new Date(
       Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1)
     );
+
     const startOfLastMonth = new Date(
       Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - 1, 1)
     );
@@ -32,8 +36,10 @@ const getStatistics = async (req, res) => {
       {
         $match: {
           createdAt: {
-            $gte: today,
-            $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000),
+            $gte: new Date(today.getTime() - vietnamTimezoneOffset),
+            $lt: new Date(
+              today.getTime() + 24 * 60 * 60 * 1000 - vietnamTimezoneOffset
+            ),
           },
           purchaseType: "Offline",
         },
@@ -52,7 +58,10 @@ const getStatistics = async (req, res) => {
     const yesterdayRevenue = await Bill.aggregate([
       {
         $match: {
-          createdAt: { $gte: yesterday, $lt: today },
+          createdAt: {
+            $gte: new Date(yesterday.getTime() - vietnamTimezoneOffset),
+            $lt: new Date(today.getTime() - vietnamTimezoneOffset),
+          },
           purchaseType: "Offline",
         },
       },
@@ -68,9 +77,9 @@ const getStatistics = async (req, res) => {
 
     const todayGrowth = yesterdayRevenue[0]?.totalAmount
       ? (((todayRevenue[0]?.totalAmount || 0) -
-        yesterdayRevenue[0].totalAmount) /
-        yesterdayRevenue[0].totalAmount) *
-      100
+          yesterdayRevenue[0].totalAmount) /
+          yesterdayRevenue[0].totalAmount) *
+        100
       : null;
 
     // 3. Doanh thu tháng này (Offline) sau khi trừ chiết khấu
@@ -78,8 +87,10 @@ const getStatistics = async (req, res) => {
       {
         $match: {
           createdAt: {
-            $gte: startOfMonth,
-            $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000),
+            $gte: new Date(startOfMonth.getTime() - vietnamTimezoneOffset),
+            $lt: new Date(
+              today.getTime() + 24 * 60 * 60 * 1000 - vietnamTimezoneOffset
+            ),
           },
           purchaseType: "Offline",
         },
@@ -98,7 +109,14 @@ const getStatistics = async (req, res) => {
     const lastMonthRevenue = await Bill.aggregate([
       {
         $match: {
-          createdAt: { $gte: startOfLastMonth, $lt: endOfLastMonth },
+          createdAt: {
+            $gte: new Date(startOfLastMonth.getTime() - vietnamTimezoneOffset),
+            $lt: new Date(
+              endOfLastMonth.getTime() +
+                24 * 60 * 60 * 1000 -
+                vietnamTimezoneOffset
+            ),
+          },
           purchaseType: "Offline",
         },
       },
@@ -114,9 +132,9 @@ const getStatistics = async (req, res) => {
 
     const monthlyGrowth = lastMonthRevenue[0]?.totalAmount
       ? (((currentMonthRevenue[0]?.totalAmount || 0) -
-        lastMonthRevenue[0].totalAmount) /
-        lastMonthRevenue[0].totalAmount) *
-      100
+          lastMonthRevenue[0].totalAmount) /
+          lastMonthRevenue[0].totalAmount) *
+        100
       : null;
 
     // 5. Doanh thu năm nay (Offline) sau khi trừ chiết khấu
@@ -124,8 +142,10 @@ const getStatistics = async (req, res) => {
       {
         $match: {
           createdAt: {
-            $gte: startOfYear,
-            $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000),
+            $gte: new Date(startOfYear.getTime() - vietnamTimezoneOffset),
+            $lt: new Date(
+              today.getTime() + 24 * 60 * 60 * 1000 - vietnamTimezoneOffset
+            ),
           },
           purchaseType: "Offline",
         },
@@ -144,7 +164,14 @@ const getStatistics = async (req, res) => {
     const lastYearRevenue = await Bill.aggregate([
       {
         $match: {
-          createdAt: { $gte: startOfLastYear, $lt: endOfLastYear },
+          createdAt: {
+            $gte: new Date(startOfLastYear.getTime() - vietnamTimezoneOffset),
+            $lt: new Date(
+              endOfLastYear.getTime() +
+                24 * 60 * 60 * 1000 -
+                vietnamTimezoneOffset
+            ),
+          },
           purchaseType: "Offline",
         },
       },
@@ -160,9 +187,9 @@ const getStatistics = async (req, res) => {
 
     const yearlyGrowth = lastYearRevenue[0]?.totalAmount
       ? (((currentYearRevenue[0]?.totalAmount || 0) -
-        lastYearRevenue[0].totalAmount) /
-        lastYearRevenue[0].totalAmount) *
-      100
+          lastYearRevenue[0].totalAmount) /
+          lastYearRevenue[0].totalAmount) *
+        100
       : null;
 
     // 7. Tổng số sản phẩm
@@ -197,14 +224,7 @@ const getDailyRevenue = async (req, res) => {
   try {
     const { startDate, endDate, userId } = req.query;
 
-    // Check if startDate and endDate are provided
-    if (!startDate || !endDate) {
-      return res
-        .status(400)
-        .json({ message: "startDate and endDate are required." });
-    }
-
-    // Convert startDate and endDate to Date objects and set time ranges
+    // Convert startDate và endDate sang Date để sử dụng trong $match
     const start = new Date(startDate);
     start.setUTCHours(0, 0, 0, 0);
     const end = new Date(endDate);
@@ -214,17 +234,20 @@ const getDailyRevenue = async (req, res) => {
     const data = await Bill.aggregate([
       {
         $match: {
-          createdAt: { $gte: start, $lte: end },
-          purchaseType: "Offline", // Only include offline bills
+          createdAt: {
+            $gte: new Date(start.getTime() - 7 * 60 * 60 * 1000), // Chuyển UTC+7
+            $lte: new Date(end.getTime() - 7 * 60 * 60 * 1000), // Chuyển UTC+7
+          },
+          purchaseType: "Offline",
           ...(userId && { createBy: new mongoose.Types.ObjectId(userId) }),
         },
       },
       {
         $group: {
           _id: {
-            day: { $dayOfMonth: "$createdAt" },
-            month: { $month: "$createdAt" },
-            year: { $year: "$createdAt" },
+            day: { $dayOfMonth: { $add: ["$createdAt", 7 * 60 * 60 * 1000] } },
+            month: { $month: { $add: ["$createdAt", 7 * 60 * 60 * 1000] } },
+            year: { $year: { $add: ["$createdAt", 7 * 60 * 60 * 1000] } },
             employee: "$createBy",
           },
           totalAmount: { $sum: "$totalAmount" },
@@ -233,7 +256,7 @@ const getDailyRevenue = async (req, res) => {
       },
       {
         $lookup: {
-          from: "employeemanagements", // Verify this collection name in MongoDB
+          from: "employeemanagements",
           localField: "_id.employee",
           foreignField: "_id",
           as: "employeeDetails",
@@ -269,7 +292,7 @@ const getDailyRevenue = async (req, res) => {
       { $sort: { date: 1, employeeCode: 1 } },
     ]);
 
-    // Format data
+    // Định dạng dữ liệu
     const formattedData = data.reduce((acc, curr) => {
       const dateIndex = acc.findIndex((item) => item.date === curr.date);
 
@@ -302,13 +325,14 @@ const getDailyRevenue = async (req, res) => {
 
     res.json(formattedData);
   } catch (error) {
-    console.error("Error in getDailyRevenue:", error); // Detailed error log
+    console.error("Error in getDailyRevenue:", error);
     res.status(500).json({
       message: "Error retrieving daily revenue data",
-      error: error.message || error, // Include the error message
+      error: error.message || error,
     });
   }
 };
+
 const getCustomerStatistics = async (req, res) => {
   try {
     const { startDate, endDate, customerId } = req.query;
@@ -320,15 +344,18 @@ const getCustomerStatistics = async (req, res) => {
         .json({ message: "startDate and endDate are required." });
     }
 
-    // Convert startDate and endDate to Date objects
+    // Define Date objects for start and end, set them to UTC+7 in $match
     const start = new Date(startDate);
     start.setUTCHours(0, 0, 0, 0);
     const end = new Date(endDate);
     end.setUTCHours(23, 59, 59, 999);
 
-    // Define match stage with customerId as ObjectId if provided
+    // Define match stage with customerId as ObjectId if provided, adjust createdAt for UTC+7
     const matchStage = {
-      createdAt: { $gte: start, $lte: end },
+      createdAt: {
+        $gte: new Date(start.getTime() - 7 * 60 * 60 * 1000),
+        $lte: new Date(end.getTime() - 7 * 60 * 60 * 1000),
+      },
       ...(customerId && { customer: new mongoose.Types.ObjectId(customerId) }),
     };
 
@@ -364,7 +391,13 @@ const getCustomerStatistics = async (req, res) => {
       {
         $group: {
           _id: {
-            date: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+            // Convert createdAt to UTC+7 for grouping by day
+            date: {
+              $dateToString: {
+                format: "%Y-%m-%d",
+                date: { $add: ["$createdAt", 7 * 60 * 60 * 1000] },
+              },
+            },
             customer: "$customer",
             category: "$categoryDetails._id",
           },
