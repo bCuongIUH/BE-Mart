@@ -107,7 +107,12 @@ const billSchema = new mongoose.Schema({
   ],
   totalAmount: { type: Number, required: true },
   discountAmount: { type: Number, required: false, default: 0 },
-  // appliedVoucherCodes: [String], // Mã các voucher đã áp dụng
+
+  status: { 
+    type: String, 
+    enum: ['HoanThanh', 'HoanTra', 'Canceled'], 
+    default: 'HoanThanh' 
+  },
   appliedVouchers: [
     {
       code: { type: String, required: true },

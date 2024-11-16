@@ -250,15 +250,13 @@ exports.createBill = async (req, res) => {
 exports.createDirectPurchaseBill = async (req, res) => {
   try {
     const { paymentMethod, phoneNumber, items, createBy, voucherCodes = [], customerId } = req.body;
-
-
+console.log(req.body);
     if (!items || items.length === 0) {
       return res.status(400).json({ message: 'Danh sách sản phẩm không hợp lệ' });
     }
 
     // Kiểm tra nếu voucherCodes không phải là mảng
     if (!Array.isArray(voucherCodes)) {
-      console.log("voucherCodes không phải là mảng, gán giá trị mặc định []");
       return res.status(400).json({ message: 'voucherCodes phải là mảng hợp lệ' });
     }
 
@@ -295,6 +293,51 @@ exports.createDirectPurchaseBill = async (req, res) => {
 
     totalAmount -= discount;
 
+    for (const item of items) {
+      // Lấy tồn kho của sản phẩm
+      const stock = await Stock.findOne({
+        productId: item.product,
+        unit: item.unit,
+      });
+    
+      // Lấy thông tin sản phẩm
+      const product = await Product.findOne({ _id: item.product });
+    
+      // Nếu sản phẩm không tồn tại, đặt tên là "Không xác định"
+      const productName = product ? product.name : "Không xác định";
+    
+      // Kiểm tra tồn kho
+      if (!stock || stock.quantity < item.quantity) {
+        return res.status(400).json({
+          message: `Sản phẩm "${productName}" không đủ số lượng tồn kho.`,
+        });
+      }
+    }
+    
+
+    // Trừ tồn kho và ghi lại giao dịch
+    for (const item of items) {
+      const stock = await Stock.findOne({
+        productId: item.product,
+        unit: item.unit,
+      });
+
+      stock.quantity -= item.quantity;
+      await stock.save();
+
+      const transaction = new Transaction({
+        productId: item.product,
+        transactionType: "ban",
+        quantity: item.quantity,
+        unit: item.unit,
+        date: new Date(),
+        isDeleted: false,
+      });
+
+      await transaction.save();
+    }
+
+    // Tạo hóa đơn
     const bill = new Bill({
       customer: customerId || null,
       items,
@@ -321,6 +364,7 @@ exports.createDirectPurchaseBill = async (req, res) => {
     res.status(500).json({ message: "Đã xảy ra lỗi không mong muốn, vui lòng thử lại." });
   }
 };
+
 
 
 
