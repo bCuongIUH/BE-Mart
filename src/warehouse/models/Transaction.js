@@ -9,7 +9,7 @@ const TransactionSchema = new mongoose.Schema({
     },
     transactionType: {
         type: String,
-        enum: ['nhap', 'ban', 'huy', 'kiemke'],
+        enum: ['nhap', 'ban', 'huy', 'kiemke', 'khuyenmai'],
         required: true
     },
     quantity: {

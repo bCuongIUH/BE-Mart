@@ -337,20 +337,17 @@ const getCustomerStatistics = async (req, res) => {
   try {
     const { startDate, endDate, customerId } = req.query;
 
-    // Check if startDate and endDate are provided
     if (!startDate || !endDate) {
       return res
         .status(400)
         .json({ message: "startDate and endDate are required." });
     }
 
-    // Define Date objects for start and end, set them to UTC+7 in $match
     const start = new Date(startDate);
     start.setUTCHours(0, 0, 0, 0);
     const end = new Date(endDate);
     end.setUTCHours(23, 59, 59, 999);
 
-    // Define match stage with customerId as ObjectId if provided, adjust createdAt for UTC+7
     const matchStage = {
       createdAt: {
         $gte: new Date(start.getTime() - 7 * 60 * 60 * 1000),
@@ -391,7 +388,6 @@ const getCustomerStatistics = async (req, res) => {
       {
         $group: {
           _id: {
-            // Convert createdAt to UTC+7 for grouping by day
             date: {
               $dateToString: {
                 format: "%Y-%m-%d",
@@ -416,6 +412,7 @@ const getCustomerStatistics = async (req, res) => {
           date: "$_id.date",
           customerId: "$customerInfo.CustomerId",
           customerName: "$customerInfo.fullName",
+          phoneNumber: "$customerInfo.phoneNumber",
           address: {
             houseNumber: "$customerInfo.addressLines.houseNumber",
             ward: "$customerInfo.addressLines.ward",
@@ -428,7 +425,7 @@ const getCustomerStatistics = async (req, res) => {
           totalAfterDiscountAmount: 1,
         },
       },
-      { $sort: { date: 1 } },
+      { $sort: { date: 1, phoneNumber: 1 } },
     ]);
 
     res.json(data);

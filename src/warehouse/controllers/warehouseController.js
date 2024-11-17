@@ -39,7 +39,7 @@ exports.getAllWarehouse = async (req, res) => {
     }
 };
 
-// tạo phiếu nhập kho   
+
 // exports.createWarehouseEntry = async (req, res) => {
 //     try {
 //         const { entryCode, supplierId, products, enteredBy } = req.body;
@@ -197,29 +197,15 @@ exports.createWarehouseEntry = async (req, res) => {
                 await newStock.save();
             }
 
-            // Kiểm tra xem đã có giao dịch nào trong Transaction với cùng productId và unit chưa
-            const existingTransaction = await Transaction.findOne({
+            // Tạo mới một giao dịch cho lần nhập hàng này
+            const newTransaction = new Transaction({
                 productId: product._id,
+                transactionType: 'nhap',
+                quantity: itemQuantity,
                 unit: item.unit,
-                transactionType: 'nhap' // chỉ xét giao dịch nhập hàng
+                date: Date.now()
             });
-
-            if (existingTransaction) {
-                // Nếu có, chỉ cập nhật thêm số lượng vào giao dịch đó
-                existingTransaction.quantity += itemQuantity;
-                existingTransaction.date = Date.now(); // cập nhật thời gian mới nhất
-                await existingTransaction.save();
-            } else {
-                // Nếu chưa có, tạo một giao dịch mới
-                const newTransaction = new Transaction({
-                    productId: product._id,
-                    transactionType: 'nhap',
-                    quantity: itemQuantity,
-                    unit: item.unit,
-                    date: Date.now()
-                });
-                await newTransaction.save();
-            }
+            await newTransaction.save();
         }
 
         res.status(201).json({ message: 'Nhập kho thành công', warehouseEntry: newWarehouseEntryRecord });

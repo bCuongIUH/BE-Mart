@@ -20,6 +20,7 @@ const StockSchema = new mongoose.Schema({
         type: Date,
         default: Date.now
     }
+    
 });
 
 const Stock = mongoose.model('Stock', StockSchema);

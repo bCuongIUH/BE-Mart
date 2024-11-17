@@ -1,101 +1,6 @@
-// const mongoose = require('mongoose');
-
-// const billSchema = new mongoose.Schema({
-//   user: { 
-//     type: mongoose.Schema.Types.ObjectId, 
-//     ref: 'User', 
-//     required: false 
-//   },
-//   customer: { 
-//     type: mongoose.Schema.Types.ObjectId, 
-//     ref: 'Customer' 
-  
-//   },
-//   items: [
-//     {
-//       product: { 
-//         type: mongoose.Schema.Types.ObjectId, 
-//         ref: 'Product' 
-//       },
-//       quantity: { 
-//         type: Number, 
-//         required: true 
-//       },
-//       currentPrice: { 
-//         type: Number, 
-//         required: true 
-//       },
-//       totalPrice: { 
-//         type: Number, 
-//         required: false 
-//       },
-//       unit: { 
-//         type: String,
-//         required: true,
-//       },
-  
-//     },
-//   ],
-//   totalAmount: { 
-//     type: Number, 
-//     required: true 
-//   },
-//   status: { 
-//     type: String, 
-//     enum: ['HoanThanh', 'HoanTra', 'Canceled'], 
-//     default: 'HoanThanh' 
-//   },
-//   // changeAmount: { // Tiền thừa trả lại khách
-//   //   type: Number,
-//   //   required: false,
-//   //   default: 0
-//   // },
-
-//   discountAmount: { // Tiền giảm giá
-//     type: Number,
-//     required: false,
-//     default: 0
-//   },
-//    appliedVoucher: { // ID chương trình khuyến mãi áp dụng
-//     type: mongoose.Schema.Types.ObjectId,
-//     ref: 'Voucher',
-//     required: false},
-//   createdAt: { 
-//     type: Date, 
-//     default: Date.now 
-//   },
-//   paymentMethod: { 
-//     type: String, 
-//     enum: ['Cash', 'Card'], 
-//     required: true 
-//   },
-//   phoneNumber: {  
-//     type: String,
-//     required: false, 
-//   },
-//   purchaseType: {
-//     type: String,
-//     enum: ['Online', 'Offline'],  
-//     required: true 
-//   },
-//    createBy: { type: mongoose.Schema.Types.ObjectId, 
-//     ref: 'EmployeeManagement', 
-//     required: false  },
-  
-//     appliedVoucher: { 
-//       type: mongoose.Schema.Types.ObjectId, 
-//       ref: 'Voucher', 
-//       required: false 
-//     },
-//     appliedVoucherCode: { 
-//       type: String, 
-//       required: false 
-//     },
-// });
-
-// module.exports = mongoose.model('Bill', billSchema);
 const mongoose = require('mongoose');
 const billSchema = new mongoose.Schema({
+  billCode: { type: String },
   customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' },
   items: [
     {
@@ -132,4 +37,16 @@ const billSchema = new mongoose.Schema({
   createBy: { type: mongoose.Schema.Types.ObjectId, ref: 'EmployeeManagement', required: false },
   createdAt: { type: Date, default: Date.now },
 });
+billSchema.pre('save', function (next) {
+  if (!this.billCode) {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const randomNumber = Math.floor(1000 + Math.random() * 9000);
+    this.billCode = `HĐB-${yyyy}-${mm}-${dd} ${randomNumber}`;
+  }
+  next();
+});
+
 module.exports = mongoose.model('Bill', billSchema);

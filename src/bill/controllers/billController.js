@@ -250,7 +250,7 @@ exports.createBill = async (req, res) => {
 exports.createDirectPurchaseBill = async (req, res) => {
   try {
     const { paymentMethod, phoneNumber, items, createBy, voucherCodes = [], customerId } = req.body;
-console.log(req.body);
+
     if (!items || items.length === 0) {
       return res.status(400).json({ message: 'Danh sách sản phẩm không hợp lệ' });
     }
@@ -325,9 +325,12 @@ console.log(req.body);
       stock.quantity -= item.quantity;
       await stock.save();
 
+      const transactionType = item.currentPrice === 0 ? "khuyenmai" : "ban";
+
       const transaction = new Transaction({
         productId: item.product,
-        transactionType: "ban",
+        transactionType, 
+        // transactionType: "ban",
         quantity: item.quantity,
         unit: item.unit,
         date: new Date(),
