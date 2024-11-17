@@ -47,9 +47,7 @@ const getStatistics = async (req, res) => {
       {
         $group: {
           _id: null,
-          totalAmount: {
-            $sum: { $subtract: ["$totalAmount", "$discountAmount"] },
-          },
+          totalAmount: { $sum: "$totalAmount" }, 
         },
       },
     ]);
@@ -68,9 +66,7 @@ const getStatistics = async (req, res) => {
       {
         $group: {
           _id: null,
-          totalAmount: {
-            $sum: { $subtract: ["$totalAmount", "$discountAmount"] },
-          },
+          totalAmount: { $sum: "$totalAmount" }, 
         },
       },
     ]);
@@ -98,9 +94,7 @@ const getStatistics = async (req, res) => {
       {
         $group: {
           _id: null,
-          totalAmount: {
-            $sum: { $subtract: ["$totalAmount", "$discountAmount"] },
-          },
+          totalAmount: { $sum: "$totalAmount" }, 
         },
       },
     ]);
@@ -123,9 +117,7 @@ const getStatistics = async (req, res) => {
       {
         $group: {
           _id: null,
-          totalAmount: {
-            $sum: { $subtract: ["$totalAmount", "$discountAmount"] },
-          },
+          totalAmount: { $sum: "$totalAmount" }, 
         },
       },
     ]);
@@ -153,9 +145,7 @@ const getStatistics = async (req, res) => {
       {
         $group: {
           _id: null,
-          totalAmount: {
-            $sum: { $subtract: ["$totalAmount", "$discountAmount"] },
-          },
+          totalAmount: { $sum: "$totalAmount" }, 
         },
       },
     ]);
@@ -178,9 +168,7 @@ const getStatistics = async (req, res) => {
       {
         $group: {
           _id: null,
-          totalAmount: {
-            $sum: { $subtract: ["$totalAmount", "$discountAmount"] },
-          },
+          totalAmount: { $sum: "$totalAmount" }, 
         },
       },
     ]);
@@ -283,9 +271,9 @@ const getDailyRevenue = async (req, res) => {
           employeeCode: "$employeeDetails.MaNV",
           employeeName: "$employeeDetails.fullName",
           discountAmount: "$totalDiscount",
-          totalAmount: "$totalAmount",
-          revenueAfterDiscount: {
-            $subtract: ["$totalAmount", "$totalDiscount"],
+          revenueAfterDiscount:"$totalAmount",
+          totalAmount: {
+            $sum: ["$totalAmount", "$totalDiscount"],
           },
         },
       },
@@ -368,9 +356,21 @@ const getCustomerStatistics = async (req, res) => {
       },
       { $unwind: "$customerDetails" },
       {
+        $addFields: {
+          // Loại bỏ các sản phẩm khuyến mãi (nếu `isGift` hoặc `price === 0`)
+          filteredItems: {
+            $filter: {
+              input: "$items",
+              as: "item",
+              cond: { $gt: ["$$item.currentPrice", 0] }, // Giữ sản phẩm có giá > 0
+            },
+          },
+        },
+      },
+      {
         $lookup: {
           from: "products",
-          localField: "items.product",
+          localField: "filteredItems.product",
           foreignField: "_id",
           as: "productDetails",
         },
@@ -397,10 +397,17 @@ const getCustomerStatistics = async (req, res) => {
             customer: "$customer",
             category: "$categoryDetails._id",
           },
-          totalAmount: { $sum: "$totalAmount" },
           discountAmount: { $sum: "$discountAmount" },
           totalAfterDiscountAmount: {
-            $sum: { $subtract: ["$totalAmount", "$discountAmount"] },
+            $sum: {
+              $sum: {
+                $map: {
+                  input: "$filteredItems",
+                  as: "item",
+                  in: { $multiply: ["$$item.currentPrice", "$$item.quantity"] },
+                },
+              },
+            },
           },
           customerInfo: { $first: "$customerDetails" },
           categoryName: { $first: "$categoryDetails.name" },
@@ -420,9 +427,13 @@ const getCustomerStatistics = async (req, res) => {
             province: "$customerInfo.addressLines.province",
           },
           category: "$categoryName",
-          totalAmount: 1,
+          totalAmount: {
+            $add: ["$totalAfterDiscountAmount"],
+          },
           discountAmount: 1,
-          totalAfterDiscountAmount: 1,
+          totalAfterDiscountAmount: {
+            $subtract: ["$totalAfterDiscountAmount", "$discountAmount"], // Tổng tiền trừ đi chiết khấu
+          },
         },
       },
       { $sort: { date: 1, phoneNumber: 1 } },
