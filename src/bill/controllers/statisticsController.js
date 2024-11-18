@@ -42,6 +42,7 @@ const getStatistics = async (req, res) => {
             ),
           },
           purchaseType: "Offline",
+          status: "HoanThanh",
         },
       },
       {
@@ -61,6 +62,7 @@ const getStatistics = async (req, res) => {
             $lt: new Date(today.getTime() - vietnamTimezoneOffset),
           },
           purchaseType: "Offline",
+          status: "HoanThanh",
         },
       },
       {
@@ -89,6 +91,7 @@ const getStatistics = async (req, res) => {
             ),
           },
           purchaseType: "Offline",
+          status: "HoanThanh",
         },
       },
       {
@@ -112,6 +115,7 @@ const getStatistics = async (req, res) => {
             ),
           },
           purchaseType: "Offline",
+          status: "HoanThanh",
         },
       },
       {
@@ -140,6 +144,7 @@ const getStatistics = async (req, res) => {
             ),
           },
           purchaseType: "Offline",
+          status: "HoanThanh",
         },
       },
       {
@@ -163,6 +168,7 @@ const getStatistics = async (req, res) => {
             ),
           },
           purchaseType: "Offline",
+          status: "HoanThanh",
         },
       },
       {
@@ -227,6 +233,7 @@ const getDailyRevenue = async (req, res) => {
             $lte: new Date(end.getTime() - 7 * 60 * 60 * 1000), // Chuyển UTC+7
           },
           purchaseType: "Offline",
+          status: "HoanThanh",
           ...(userId && { createBy: new mongoose.Types.ObjectId(userId) }),
         },
       },
@@ -341,6 +348,7 @@ const getCustomerStatistics = async (req, res) => {
         $gte: new Date(start.getTime() - 7 * 60 * 60 * 1000),
         $lte: new Date(end.getTime() - 7 * 60 * 60 * 1000),
       },
+      status: "HoanThanh",
       ...(customerId && { customer: new mongoose.Types.ObjectId(customerId) }),
     };
 
@@ -432,7 +440,7 @@ const getCustomerStatistics = async (req, res) => {
           },
           discountAmount: 1,
           totalAfterDiscountAmount: {
-            $subtract: ["$totalAfterDiscountAmount", "$discountAmount"], // Tổng tiền trừ đi chiết khấu
+            $subtract: ["$totalAfterDiscountAmount", "$discountAmount"], 
           },
         },
       },

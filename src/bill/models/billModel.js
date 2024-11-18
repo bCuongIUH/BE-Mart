@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
+
 const billSchema = new mongoose.Schema({
-  billCode: { type: String },
+  billCode: { type: String }, // Mã hóa đơn, sẽ thay đổi theo status
   customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' },
   items: [
     {
@@ -11,8 +12,7 @@ const billSchema = new mongoose.Schema({
     }
   ],
   totalAmount: { type: Number, required: true },
-  discountAmount: { type: Number, required: false, default: 0 },
-
+  discountAmount: { type: Number, default: 0 },
   status: { 
     type: String, 
     enum: ['HoanThanh', 'HoanTra', 'Canceled'], 
@@ -20,32 +20,41 @@ const billSchema = new mongoose.Schema({
   },
   appliedVouchers: [
     {
-      code: { type: String, required: true },
-      type: { type: String, enum: ['BuyXGetY', 'FixedDiscount', 'PercentageDiscount'], required: true },
+      code: { type: String },
+      type: { type: String, enum: ['BuyXGetY', 'FixedDiscount', 'PercentageDiscount'] },
     }
   ],
   giftItems: [
     {
       product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
-      quantity: { type: Number, required: true },
-      unit: { type: String, required: true },
+      quantity: { type: Number },
+      unit: { type: String },
     }
   ],
   paymentMethod: { type: String, enum: ['Cash', 'Card'], required: true },
-  phoneNumber: { type: String, required: false },
+  phoneNumber: { type: String },
   purchaseType: { type: String, enum: ['Online', 'Offline'], required: true },
-  createBy: { type: mongoose.Schema.Types.ObjectId, ref: 'EmployeeManagement', required: false },
+  createBy: { type: mongoose.Schema.Types.ObjectId, ref: 'EmployeeManagement' },
   createdAt: { type: Date, default: Date.now },
 });
+
+// Middleware để tạo hoặc cập nhật billCode
 billSchema.pre('save', function (next) {
-  if (!this.billCode) {
-    const now = new Date();
-    const yyyy = now.getFullYear();
-    const mm = String(now.getMonth() + 1).padStart(2, '0');
-    const dd = String(now.getDate()).padStart(2, '0');
-    const randomNumber = Math.floor(1000 + Math.random() * 9000);
-    this.billCode = `HĐB-${yyyy}-${mm}-${dd} ${randomNumber}`;
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const dd = String(now.getDate()).padStart(2, '0');
+  const randomNumber = Math.floor(1000 + Math.random() * 9000);
+
+  // Tạo mã hóa đơn dựa trên trạng thái
+  if (this.status === 'HoanTra') {
+    this.billCode = `HĐT-${yyyy}-${mm}-${dd}-${randomNumber}`;
+  } else if (this.status === 'HoanThanh') {
+    this.billCode = `HĐB-${yyyy}-${mm}-${dd}-${randomNumber}`;
+  } else if (this.status === 'Canceled') {
+    this.billCode = `HĐC-${yyyy}-${mm}-${dd}-${randomNumber}`;
   }
+
   next();
 });
 

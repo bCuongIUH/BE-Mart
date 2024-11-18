@@ -246,7 +246,6 @@ exports.createBill = async (req, res) => {
 
 // Tạo hóa đơn mua trực tiếp
 
-
 exports.createDirectPurchaseBill = async (req, res) => {
   try {
     const { paymentMethod, phoneNumber, items, createBy, voucherCodes = [], customerId } = req.body;
@@ -294,26 +293,20 @@ exports.createDirectPurchaseBill = async (req, res) => {
     totalAmount -= discount;
 
     for (const item of items) {
-      // Lấy tồn kho của sản phẩm
       const stock = await Stock.findOne({
         productId: item.product,
         unit: item.unit,
       });
-    
-      // Lấy thông tin sản phẩm
+
       const product = await Product.findOne({ _id: item.product });
-    
-      // Nếu sản phẩm không tồn tại, đặt tên là "Không xác định"
       const productName = product ? product.name : "Không xác định";
-    
-      // Kiểm tra tồn kho
+
       if (!stock || stock.quantity < item.quantity) {
         return res.status(400).json({
           message: `Sản phẩm "${productName}" không đủ số lượng tồn kho.`,
         });
       }
     }
-    
 
     // Trừ tồn kho và ghi lại giao dịch
     for (const item of items) {
@@ -329,8 +322,7 @@ exports.createDirectPurchaseBill = async (req, res) => {
 
       const transaction = new Transaction({
         productId: item.product,
-        transactionType, 
-        // transactionType: "ban",
+        transactionType,
         quantity: item.quantity,
         unit: item.unit,
         date: new Date(),
@@ -352,6 +344,7 @@ exports.createDirectPurchaseBill = async (req, res) => {
       discountAmount: discount,
       appliedVouchers,
       giftItems,
+      status: 'HoanThanh', // Mặc định trạng thái là 'HoanThanh'
     });
 
     await bill.save();
@@ -532,5 +525,87 @@ exports.updateBillStatus = async (req, res) => {
     res.status(200).json({ message: 'Trạng thái hóa đơn đã được cập nhật', bill });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+
+//hoàn trả bill
+exports.returnPurchaseBill = async (req, res) => {
+  try {
+    const { billId, returnedItems } = req.body;
+
+    if (!billId) {
+      return res.status(400).json({ message: 'Thiếu thông tin billId' });
+    }
+
+    // Tìm hóa đơn
+    const bill = await Bill.findById(billId);
+    if (!bill) {
+      return res.status(404).json({ message: 'Không tìm thấy hóa đơn' });
+    }
+
+    if (bill.purchaseType !== 'Offline') {
+      return res.status(400).json({ message: 'Chỉ hỗ trợ hoàn trả hóa đơn Offline' });
+    }
+
+    if (bill.status === 'HoanTra') {
+      return res.status(400).json({ message: 'Hóa đơn đã được hoàn trả trước đó' });
+    }
+
+    // Kiểm tra thời gian hoàn trả trong vòng 24 giờ
+    const currentTime = new Date();
+    const billCreationTime = new Date(bill.createdAt);
+    const timeDifference = currentTime - billCreationTime;
+
+    if (timeDifference > 24 * 60 * 60 * 1000) {
+      return res.status(400).json({
+        message: 'Chỉ có thể hoàn trả hóa đơn trong vòng 24 giờ kể từ thời gian thanh toán',
+      });
+    }
+
+    // Lấy danh sách items từ hóa đơn gốc
+    const { items } = bill;
+
+    // Duyệt qua từng item để hoàn trả
+    for (const item of items) {
+      const stock = await Stock.findOne({
+        productId: item.product,
+        unit: item.unit,
+      });
+
+      if (!stock) {
+        return res.status(400).json({
+          message: `Không tìm thấy tồn kho cho sản phẩm ID: ${item.product}`,
+        });
+      }
+
+      // Cộng lại số lượng vào tồn kho
+      stock.quantity += item.quantity;
+      await stock.save();
+
+      // Ghi lại giao dịch hoàn trả
+      const transaction = new Transaction({
+        productId: item.product,
+        transactionType: 'hoantra',
+        quantity: item.quantity,
+        unit: item.unit,
+        date: new Date(),
+        isDeleted: false,
+      });
+
+      await transaction.save();
+    }
+
+    // Cập nhật trạng thái hóa đơn
+    bill.status = 'HoanTra';
+    await bill.save();
+
+    res.status(200).json({
+      message: 'Hóa đơn đã được hoàn trả thành công',
+      bill,
+    });
+  } catch (error) {
+    console.error('Lỗi:', error.message);
+    res.status(500).json({ message: 'Đã xảy ra lỗi, vui lòng thử lại' });
   }
 };
