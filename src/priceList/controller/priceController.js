@@ -86,6 +86,7 @@ exports.addPricesToPriceList = async (req, res) => {
       const existingPriceLists = await PriceList.find({
         _id: { $ne: priceListId }, // Exclude the current price list
         "products.productId": productId,
+        isDeleted: false,
         startDate: { $lte: priceList.endDate },
         endDate: { $gte: priceList.startDate },
       });

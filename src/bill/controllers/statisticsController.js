@@ -195,6 +195,7 @@ const getStatistics = async (req, res) => {
     // 9. Tổng số khách hàng
     const totalCustomers = await Customer.countDocuments();
 
+    
     res.json({
       todayRevenue: todayRevenue[0]?.totalAmount || 0,
       yesterdayRevenue: yesterdayRevenue[0]?.totalAmount || 0,
@@ -213,6 +214,7 @@ const getStatistics = async (req, res) => {
     res.status(500).json({ message: "Error calculating statistics", error });
   }
 };
+
 
 const getDailyRevenue = async (req, res) => {
   try {
@@ -456,5 +458,265 @@ const getCustomerStatistics = async (req, res) => {
     });
   }
 };
+const getVoucherStatistics = async (req, res) => {
+  try {
+    const { startDate, endDate, voucherType } = req.query;
 
-module.exports = { getDailyRevenue, getStatistics, getCustomerStatistics };
+    const start = new Date(startDate);
+    start.setUTCHours(0, 0, 0, 0);
+    const end = new Date(endDate);
+    end.setUTCHours(23, 59, 59, 999);
+
+    const matchCondition = {
+      createdAt: {
+        $gte: start,
+        $lte: end,
+      },
+    };
+
+    const typeTranslations = {
+      BuyXGetY: "Mua hàng Tặng hàng",
+      FixedDiscount: "Giảm Giá Cố Định",
+      PercentageDiscount: "Giảm Giá Phần Trăm",
+    };
+
+    const voucherStatistics = await Bill.aggregate([
+      { $match: matchCondition },
+      { $unwind: "$appliedVouchers" },
+      {
+        $match: {
+          "appliedVouchers.type": {
+            $in: ["FixedDiscount", "PercentageDiscount"],
+          },
+        },
+      },
+      {
+        $group: {
+          _id: "$appliedVouchers.code",
+          totalDiscountAmount: { $sum: "$discountAmount" },
+          usageCount: { $sum: 1 },
+          voucherType: { $first: "$appliedVouchers.type" },
+        },
+      },
+      {
+        $lookup: {
+          from: "vouchers",
+          localField: "_id",
+          foreignField: "code",
+          as: "voucherDetails",
+        },
+      },
+      { $unwind: "$voucherDetails" },
+      {
+        $lookup: {
+          from: "promotionprograms",
+          localField: "voucherDetails.promotionProgram",
+          foreignField: "_id",
+          as: "promotionProgramDetails",
+        },
+      },
+      { $unwind: "$promotionProgramDetails" },
+      {
+        $lookup: {
+          from: "fixeddiscountvouchers",
+          localField: "voucherDetails._id",
+          foreignField: "voucherId",
+          as: "fixedDiscountConditions",
+        },
+      },
+      {
+        $lookup: {
+          from: "percentagediscountvouchers",
+          localField: "voucherDetails._id",
+          foreignField: "voucherId",
+          as: "percentageDiscountConditions",
+        },
+      },
+      {
+        $addFields: {
+          conditions: {
+            $cond: {
+              if: { $eq: ["$voucherType", "FixedDiscount"] },
+              then: "$fixedDiscountConditions",
+              else: "$percentageDiscountConditions",
+            },
+          },
+        },
+      },
+      {
+        $addFields: {
+          deduplicatedConditions: {
+            $reduce: {
+              input: "$conditions",
+              initialValue: [],
+              in: {
+                $cond: {
+                  if: {
+                    $anyElementTrue: {
+                      $map: {
+                        input: "$$value",
+                        as: "existing",
+                        in: {
+                          $and: [
+                            {
+                              $eq: [
+                                "$$existing.productXId",
+                                "$$this.productXId",
+                              ],
+                            },
+                            {
+                              $eq: [
+                                "$$existing.discountAmount",
+                                "$$this.discountAmount",
+                              ],
+                            },
+                            {
+                              $eq: [
+                                "$$existing.discountPercentage",
+                                "$$this.discountPercentage",
+                              ],
+                            },
+                          ],
+                        },
+                      },
+                    },
+                  },
+                  then: "$$value",
+                  else: { $concatArrays: ["$$value", ["$$this"]] },
+                },
+              },
+            },
+          },
+        },
+      },
+      {
+        $group: {
+          _id: "$_id",
+          voucherCode: { $first: "$_id" },
+          voucherName: { $first: "$voucherDetails.name" },
+          usageCount: { $first: "$usageCount" },
+          totalDiscountAmount: { $first: "$totalDiscountAmount" },
+          voucherType: { $first: "$voucherType" },
+          startDate: { $first: "$promotionProgramDetails.startDate" },
+          endDate: { $first: "$promotionProgramDetails.endDate" },
+          conditions: { $first: "$deduplicatedConditions" },
+        },
+      },
+      { $sort: { usageCount: -1 } },
+    ]);
+
+    const translatedVoucherStatistics = voucherStatistics.map((stat) => ({
+      ...stat,
+      voucherType: typeTranslations[stat.voucherType] || stat.voucherType,
+    }));
+
+    let buyXGetYDetails = [];
+    if (voucherType === "BuyXGetY" || !voucherType) {
+      buyXGetYDetails = await Bill.aggregate([
+        { $match: matchCondition },
+        { $unwind: "$appliedVouchers" },
+        {
+          $match: {
+            "appliedVouchers.type": "BuyXGetY",
+          },
+        },
+        {
+          $lookup: {
+            from: "vouchers",
+            localField: "appliedVouchers.code",
+            foreignField: "code",
+            as: "voucherDetails",
+          },
+        },
+        { $unwind: "$voucherDetails" },
+        {
+          $lookup: {
+            from: "promotionprograms",
+            localField: "voucherDetails.promotionProgram",
+            foreignField: "_id",
+            as: "promotionProgramDetails",
+          },
+        },
+        { $unwind: "$promotionProgramDetails" },
+        {
+          $lookup: {
+            from: "buyxgetyvouchers",
+            localField: "voucherDetails._id",
+            foreignField: "voucherId",
+            as: "buyXGetYConditions",
+          },
+        },
+        { $unwind: "$buyXGetYConditions" },
+        {
+          $unwind: {
+            path: "$buyXGetYConditions.conditions",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        {
+          $lookup: {
+            from: "products",
+            localField: "buyXGetYConditions.conditions.productXId",
+            foreignField: "_id",
+            as: "productXDetails",
+          },
+        },
+        {
+          $unwind: {
+            path: "$productXDetails",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        { $unwind: "$giftItems" },
+        {
+          $lookup: {
+            from: "products",
+            localField: "giftItems.product",
+            foreignField: "_id",
+            as: "productYDetails",
+          },
+        },
+        {
+          $unwind: {
+            path: "$productYDetails",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        {
+          $group: {
+            _id: "$voucherDetails.code",
+            voucherCode: { $first: "$voucherDetails.code" },
+            voucherName: { $first: "Mua hàng tặng hàng" },
+            startDate: { $first: "$promotionProgramDetails.startDate" },
+            endDate: { $first: "$promotionProgramDetails.endDate" },
+            productYId: { $first: "$productYDetails.code" },
+            productYName: { $first: "$productYDetails.name" },
+            quantityY: { $sum: "$giftItems.quantity" },
+            unitY: { $first: "$giftItems.unit" },
+            conditions: {
+              $addToSet: {
+                productXId: "$buyXGetYConditions.conditions.productXId",
+                quantityX: "$buyXGetYConditions.conditions.quantityX",
+                unitX: "$buyXGetYConditions.conditions.unitX",
+                productXName: "$productXDetails.name",
+              },
+            },
+          },
+        },
+      ]);
+    }
+
+    res.json({
+      voucherStatistics: translatedVoucherStatistics,
+      buyXGetYDetails,
+    });
+  } catch (error) {
+    console.error("Error in getVoucherStatistics:", error);
+    res.status(500).json({
+      message: "Error retrieving voucher statistics",
+      error: error.message || error,
+    });
+  }
+};
+
+module.exports = { getDailyRevenue, getStatistics, getCustomerStatistics, getVoucherStatistics };

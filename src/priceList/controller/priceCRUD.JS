@@ -4,53 +4,69 @@ const PriceList = require('../model/priceModels');
 // Cập nhật bảng giá theo ID
 
 exports.updatePriceList = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { code, name, description, isActive } = req.body; 
+  try {
+      const { id } = req.params;
+      const { code, name, description, isActive, startDate, endDate } = req.body; 
 
-        if (!id) {
-            return res.status(400).json({ success: false, message: 'Thiếu ID bảng giá.' });
-        }
+      if (!id) {
+          return res.status(400).json({ success: false, message: 'Thiếu ID bảng giá.' });
+      }
 
-        const existingPriceList = await PriceList.findById(id);
+      const existingPriceList = await PriceList.findById(id);
 
-        if (!existingPriceList) {
-            return res.status(404).json({ success: false, message: 'Bảng giá không tìm thấy.' });
-        }
+      if (!existingPriceList) {
+          return res.status(404).json({ success: false, message: 'Bảng giá không tìm thấy.' });
+      }
 
-        // Nếu bảng giá đang hoạt động
-        if (existingPriceList.isActive) {
-            // Chỉ cho phép cập nhật trạng thái hoạt động
-            if (isActive !== undefined) {
-                // Cập nhật trường isActive
-                existingPriceList.isActive = isActive;
-                await existingPriceList.save(); 
-                return res.status(200).json({ success: true, message: 'Trạng thái hoạt động đã được cập nhật!', priceList: existingPriceList });
-            } else {
-                return res.status(400).json({ success: false, message: 'Không thể chỉnh sửa bảng giá đang hoạt động, chỉ được phép cập nhật trạng thái hoạt động.' });
-            }
-        }
+      // Nếu bảng giá đang hoạt động
+      if (existingPriceList.isActive) {
+          // Cho phép cập nhật trạng thái hoạt động và ngày kết thúc
+          if (isActive !== undefined || endDate !== undefined) {
+              if (isActive !== undefined) {
+                  existingPriceList.isActive = isActive;
+              }
+              if (endDate !== undefined) {
+                  // Kiểm tra ngày kết thúc mới phải sau ngày bắt đầu
+                  if (new Date(endDate) <= new Date(existingPriceList.startDate)) {
+                      return res.status(400).json({ success: false, message: 'Ngày kết thúc phải sau ngày bắt đầu.' });
+                  }
+                  existingPriceList.endDate = endDate;
+              }
+              await existingPriceList.save();
+              return res.status(200).json({ success: true, message: 'Bảng giá đã được cập nhật!', priceList: existingPriceList });
+          } else {
+              return res.status(400).json({ success: false, message: 'Không thể chỉnh sửa bảng giá đang hoạt động, chỉ được phép cập nhật trạng thái hoạt động và ngày kết thúc.' });
+          }
+      }
 
-        // Nếu bảng giá không hoạt động, cho phép cập nhật tất cả các trường
-        const updateData = {
-            code: code !== undefined ? code : existingPriceList.code,
-            name: name !== undefined ? name : existingPriceList.name,
-            description: description !== undefined ? description : existingPriceList.description,
-            isActive: isActive !== undefined ? isActive : existingPriceList.isActive,
-            // Không cập nhật startDate và endDate
-        };
+      // Nếu bảng giá không hoạt động, cho phép cập nhật tất cả các trường
+      const updateData = {
+          code: code !== undefined ? code : existingPriceList.code,
+          name: name !== undefined ? name : existingPriceList.name,
+          description: description !== undefined ? description : existingPriceList.description,
+          isActive: isActive !== undefined ? isActive : existingPriceList.isActive,
+          startDate: startDate !== undefined ? startDate : existingPriceList.startDate,
+          endDate: endDate !== undefined ? endDate : existingPriceList.endDate,
+      };
 
-        const updatedPriceList = await PriceList.findByIdAndUpdate(
-            id,
-            updateData,
-            { new: true, runValidators: true }
-        );
+      // Kiểm tra ngày bắt đầu và kết thúc hợp lệ
+      if (updateData.startDate && updateData.endDate) {
+          if (new Date(updateData.endDate) <= new Date(updateData.startDate)) {
+              return res.status(400).json({ success: false, message: 'Ngày kết thúc phải sau ngày bắt đầu.' });
+          }
+      }
 
-        res.status(200).json({ success: true, message: 'Bảng giá đã được cập nhật!', priceList: updatedPriceList });
-    } catch (error) {
-        console.error("Error updating price list:", error);
-        res.status(500).json({ success: false, message: 'Không thể cập nhật bảng giá', error: error.message });
-    }
+      const updatedPriceList = await PriceList.findByIdAndUpdate(
+          id,
+          updateData,
+          { new: true, runValidators: true }
+      );
+
+      res.status(200).json({ success: true, message: 'Bảng giá đã được cập nhật!', priceList: updatedPriceList });
+  } catch (error) {
+      console.error("Error updating price list:", error);
+      res.status(500).json({ success: false, message: 'Không thể cập nhật bảng giá', error: error.message });
+  }
 };
 
 
