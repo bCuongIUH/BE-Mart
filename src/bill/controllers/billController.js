@@ -249,7 +249,7 @@ exports.createBill = async (req, res) => {
 exports.createDirectPurchaseBill = async (req, res) => {
   try {
     const { paymentMethod, phoneNumber, items, createBy, voucherCodes = [], customerId } = req.body;
-
+console.log(req.body);
     if (!items || items.length === 0) {
       return res.status(400).json({ message: 'Danh sách sản phẩm không hợp lệ' });
     }
@@ -292,21 +292,26 @@ exports.createDirectPurchaseBill = async (req, res) => {
 
     totalAmount -= discount;
 
+    const stockList = await Stock.find({
+      productId: { $in: items.map(item => item.product) },
+      unit: { $in: items.map(item => item.unit) },
+    });
+    
     for (const item of items) {
-      const stock = await Stock.findOne({
-        productId: item.product,
-        unit: item.unit,
-      });
-
+      const stock = stockList.find(
+        (s) => s.productId.toString() === item.product && s.unit === item.unit
+      );
+    
       const product = await Product.findOne({ _id: item.product });
       const productName = product ? product.name : "Không xác định";
-
+    
       if (!stock || stock.quantity < item.quantity) {
         return res.status(400).json({
-          message: `Sản phẩm "${productName}" không đủ số lượng tồn kho.`,
+          message: `Sản phẩm "${productName}" với đơn vị "${item.unit}" không đủ số lượng tồn kho.`,
         });
       }
     }
+    
 
     // Trừ tồn kho và ghi lại giao dịch
     for (const item of items) {
