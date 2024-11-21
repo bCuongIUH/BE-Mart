@@ -65,6 +65,109 @@ exports.login = async (req, res) => {
 
 
 
+// exports.register = async (req, res) => {
+//   const { email, password, fullName, phoneNumber } = req.body;
+
+//   try {
+//     // Kiểm tra xem email đã tồn tại trong User hay chưa
+//     const existingUser = await User.findOne({ email });
+//     if (existingUser) {
+//       return res.status(400).json({ message: 'Email đã được sử dụng' });
+//     }
+
+//     // Kiểm tra xem email đã tồn tại trong OTP chưa
+//     const existingOTP = await OTP.findOne({ email });
+//     if (existingOTP) {
+//       return res.status(400).json({ message: 'Email đã tồn tại trong danh sách chờ xác minh' });
+//     }
+//  // Kiểm tra xem số điện thoại đã tồn tại trong User hay chưa
+//  const existingUserByPhone = await User.findOne({ phoneNumber });
+//  if (existingUserByPhone) {
+//    return res.status(400).json({ message: 'Số điện thoại đã được sử dụng' });
+//  }
+//     // Tạo mã OTP và thời gian hết hạn
+//     const otp = generateOTP();
+//     const otpExpires = Date.now() + 10 * 60 * 1000; 
+
+//     // Lưu thông tin tạm thời vào OTP
+//     const otpRecord = new OTP({
+//       email,
+//       otp,
+//       otpExpires,
+//       verified: false,
+//       tempData: { email, password, fullName, phoneNumber }
+//     });
+//     await otpRecord.save();
+
+//     // Gửi OTP qua email
+//     await sendEmail(email, 'Xác minh OTP', `Mã OTP của bạn là: ${otp}`);
+
+//     return res.status(201).json({ message: 'Đã gửi OTP tới email của bạn' });
+//   } catch (error) {
+//     console.error("Error during registration:", error);
+//     return res.status(500).json({ message: 'Có lỗi xảy ra trong quá trình đăng ký' });
+//   }
+// };
+
+// exports.verifyOTP = async (req, res) => {
+
+//   const { email, otp } = req.body;
+
+//   try {
+//     const otpRecord = await OTP.findOne({ email, otp });
+//     if (!otpRecord) {
+//       return res.status(400).json({ message: 'OTP không hợp lệ' });
+//     }
+
+//     if (otpRecord.otpExpires < Date.now()) {
+//       await OTP.deleteOne({ email, otp });
+//       return res.status(400).json({ message: 'OTP đã hết hạn' });
+//     }
+
+//     // Kiểm tra nếu người dùng đã tồn tại
+//     const existingUser = await User.findOne({ email });
+//     if (existingUser) {
+//       return res.status(400).json({ message: 'Email đã được đăng ký' });
+//     }
+
+//     // Xác minh thành công và tạo tài khoản cho người dùng
+//     const { tempData } = otpRecord;
+//     if (!tempData) {
+//       return res.status(400).json({ message: 'Dữ liệu tạm thời không hợp lệ' });
+//     }
+
+//     const { email: tempEmail, password, fullName, phoneNumber } = tempData;
+
+//     const user = new User({ email: tempEmail, password, fullName, phoneNumber, isVerified: true });
+//     await user.save();
+
+//     const customer = new Customer({
+//       CustomerId: user._id,
+//       email: tempEmail,
+//       fullName,
+//       phoneNumber,
+//       joinDate: Date.now(),
+//       dateOfBirth: null,
+//       addressLines: {
+//         houseNumber: '',
+//         ward: '',
+//         district: '',
+//         province: ''
+//       }
+//     });
+//     await customer.save();
+
+//     await OTP.deleteOne({ email: tempEmail });
+
+//     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+//     res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production' });
+
+//     return res.status(200).json({ token, message: 'Xác minh thành công' });
+//   } catch (error) {
+//     console.error("Lỗi xác minh OTP:", error);
+//     return res.status(500).json({ message: 'Có lỗi xảy ra trong quá trình xác minh OTP' });
+//   }
+// };
 exports.register = async (req, res) => {
   const { email, password, fullName, phoneNumber } = req.body;
 
@@ -75,16 +178,19 @@ exports.register = async (req, res) => {
       return res.status(400).json({ message: 'Email đã được sử dụng' });
     }
 
-    // Kiểm tra xem email đã tồn tại trong OTP chưa
-    const existingOTP = await OTP.findOne({ email });
-    if (existingOTP) {
-      return res.status(400).json({ message: 'Email đã tồn tại trong danh sách chờ xác minh' });
+    // Kiểm tra xem số điện thoại đã tồn tại trong User chưa
+    const existingUserByPhone = await User.findOne({ phoneNumber });
+    if (existingUserByPhone) {
+      return res.status(400).json({ message: 'Số điện thoại đã được sử dụng' });
     }
- // Kiểm tra xem số điện thoại đã tồn tại trong User hay chưa
- const existingUserByPhone = await User.findOne({ phoneNumber });
- if (existingUserByPhone) {
-   return res.status(400).json({ message: 'Số điện thoại đã được sử dụng' });
- }
+
+    // Tìm khách hàng chưa đăng ký theo số điện thoại
+    const existingCustomer = await Customer.findOne({ phoneNumber });
+
+    if (existingCustomer && existingCustomer.isRegistered) {
+      return res.status(400).json({ message: 'Số điện thoại đã được đăng ký tài khoản' });
+    }
+
     // Tạo mã OTP và thời gian hết hạn
     const otp = generateOTP();
     const otpExpires = Date.now() + 10 * 60 * 1000; 
@@ -123,38 +229,50 @@ exports.verifyOTP = async (req, res) => {
       return res.status(400).json({ message: 'OTP đã hết hạn' });
     }
 
-    // Kiểm tra nếu người dùng đã tồn tại
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ message: 'Email đã được đăng ký' });
-    }
-
-    // Xác minh thành công và tạo tài khoản cho người dùng
     const { tempData } = otpRecord;
-    if (!tempData) {
-      return res.status(400).json({ message: 'Dữ liệu tạm thời không hợp lệ' });
-    }
-
     const { email: tempEmail, password, fullName, phoneNumber } = tempData;
 
-    const user = new User({ email: tempEmail, password, fullName, phoneNumber, isVerified: true });
-    await user.save();
+    // Kiểm tra nếu số điện thoại đã tồn tại trong Customer
+    const existingCustomer = await Customer.findOne({ phoneNumber });
 
-    const customer = new Customer({
-      CustomerId: user._id,
-      email: tempEmail,
-      fullName,
-      phoneNumber,
-      joinDate: Date.now(),
-      dateOfBirth: null,
-      addressLines: {
-        houseNumber: '',
-        ward: '',
-        district: '',
-        province: ''
-      }
-    });
-    await customer.save();
+    let user;
+
+    if (existingCustomer) {
+      // Cập nhật thông tin khách hàng
+      existingCustomer.email = tempEmail;
+      existingCustomer.fullName = fullName;
+      existingCustomer.isRegistered = true;
+      await existingCustomer.save();
+
+      // Tạo User liên kết với khách hàng
+      user = new User({ email: tempEmail, password, fullName, phoneNumber, isVerified: true });
+      await user.save();
+
+      // Cập nhật ID của User vào Customer
+      existingCustomer.CustomerId = user._id;
+      await existingCustomer.save();
+    } else {
+      // Nếu chưa có bản ghi Customer, tạo mới cả User và Customer
+      user = new User({ email: tempEmail, password, fullName, phoneNumber, isVerified: true });
+      await user.save();
+
+      const customer = new Customer({
+        CustomerId: user._id,
+        email: tempEmail,
+        fullName,
+        phoneNumber,
+        joinDate: Date.now(),
+        dateOfBirth: null,
+        addressLines: {
+          houseNumber: '',
+          ward: '',
+          district: '',
+          province: ''
+        },
+        isRegistered: true,
+      });
+      await customer.save();
+    }
 
     await OTP.deleteOne({ email: tempEmail });
 

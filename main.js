@@ -29,7 +29,7 @@ app.use(express.json());
 app.use(cookieParser());
 // Cấu hình CORS
 app.use(cors({
-  origin: ['http://localhost:3000','http://192.168.1.9:8081'],
+  origin: ['http://localhost:3000','http://192.168.1.7:8081'],
   credentials: true
 }));
 // app.use(cors()); 

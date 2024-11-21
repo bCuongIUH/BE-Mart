@@ -214,3 +214,97 @@ exports.createWarehouseEntry = async (req, res) => {
         res.status(500).json({ message: 'Lỗi máy chủ', error: error.message });
     }
 };
+// const data = await Bill.aggregate([
+    //   { $match: matchStage },
+    //   {
+    //     $lookup: {
+    //       from: "customers",
+    //       localField: "customer",
+    //       foreignField: "_id",
+    //       as: "customerDetails",
+    //     },
+    //   },
+    //   { $unwind: "$customerDetails" },
+    //   {
+    //     $addFields: {
+    //       // Loại bỏ các sản phẩm khuyến mãi (nếu `isGift` hoặc `price === 0`)
+    //       filteredItems: {
+    //         $filter: {
+    //           input: "$items",
+    //           as: "item",
+    //           cond: { $gt: ["$$item.currentPrice", 0] }, // Giữ sản phẩm có giá > 0
+    //         },
+    //       },
+    //     },
+    //   },
+    //   {
+    //     $lookup: {
+    //       from: "products",
+    //       localField: "filteredItems.product",
+    //       foreignField: "_id",
+    //       as: "productDetails",
+    //     },
+    //   },
+    //   { $unwind: "$productDetails" },
+    //   {
+    //     $lookup: {
+    //       from: "categories",
+    //       localField: "productDetails.category",
+    //       foreignField: "_id",
+    //       as: "categoryDetails",
+    //     },
+    //   },
+    //   { $unwind: "$categoryDetails" },
+    //   {
+    //     $group: {
+    //       _id: {
+    //         date: {
+    //           $dateToString: {
+    //             format: "%Y-%m-%d",
+    //             date: { $add: ["$createdAt", 7 * 60 * 60 * 1000] },
+    //           },
+    //         },
+    //         customer: "$customer",
+    //         category: "$categoryDetails._id",
+    //       },
+    //       discountAmount: { $sum: "$discountAmount" },
+    //       totalAfterDiscountAmount: {
+    //         $sum: {
+    //           $sum: {
+    //             $map: {
+    //               input: "$filteredItems",
+    //               as: "item",
+    //               in: { $multiply: ["$$item.currentPrice", "$$item.quantity"] },
+    //             },
+    //           },
+    //         },
+    //       },
+    //       customerInfo: { $first: "$customerDetails" },
+    //       categoryName: { $first: "$categoryDetails.name" },
+    //     },
+    //   },
+    //   {
+    //     $project: {
+    //       _id: 0,
+    //       date: "$_id.date",
+    //       customerId: "$customerInfo.CustomerId",
+    //       customerName: "$customerInfo.fullName",
+    //       phoneNumber: "$customerInfo.phoneNumber",
+    //       address: {
+    //         houseNumber: "$customerInfo.addressLines.houseNumber",
+    //         ward: "$customerInfo.addressLines.ward",
+    //         district: "$customerInfo.addressLines.district",
+    //         province: "$customerInfo.addressLines.province",
+    //       },
+    //       category: "$categoryName",
+    //       totalAmount: {
+    //         $add: ["$totalAfterDiscountAmount"],
+    //       },
+    //       discountAmount: 1,
+    //       totalAfterDiscountAmount: {
+    //         $subtract: ["$totalAfterDiscountAmount", "$discountAmount"], 
+    //       },
+    //     },
+    //   },
+    //   { $sort: { date: 1, phoneNumber: 1 } },
+    // ]);

@@ -330,15 +330,142 @@ const getDailyRevenue = async (req, res) => {
   }
 };
 
-const getCustomerStatistics = async (req, res) => {
+// const getCustomerStatistics = async (req, res) => {
 
+//   try {
+//     const { startDate, endDate, customerId } = req.query;
+
+//     if (!startDate || !endDate) {
+//       return res
+//         .status(400)
+//         .json({ message: "startDate and endDate are required." });
+//     }
+
+//     const start = new Date(startDate);
+//     start.setUTCHours(0, 0, 0, 0);
+//     const end = new Date(endDate);
+//     end.setUTCHours(23, 59, 59, 999);
+
+//     const matchStage = {
+//       createdAt: {
+//         $gte: new Date(start.getTime() - 7 * 60 * 60 * 1000),
+//         $lte: new Date(end.getTime() - 7 * 60 * 60 * 1000),
+//       },
+//       status: "HoanThanh",
+//       ...(customerId && { customer: new mongoose.Types.ObjectId(customerId) }),
+//     };
+
+//     const data = await Bill.aggregate([
+//       { $match: matchStage },
+//       {
+//         $lookup: {
+//           from: "customers",
+//           localField: "customer",
+//           foreignField: "_id",
+//           as: "customerDetails",
+//         },
+//       },
+//       { $unwind: "$customerDetails" },
+//       {
+//         $addFields: {
+//           // Loại bỏ các sản phẩm khuyến mãi (nếu `isGift` hoặc `price === 0`)
+//           filteredItems: {
+//             $filter: {
+//               input: "$items",
+//               as: "item",
+//               cond: { $gt: ["$$item.currentPrice", 0] }, // Giữ sản phẩm có giá > 0
+//             },
+//           },
+//         },
+//       },
+//       {
+//         $lookup: {
+//           from: "products",
+//           localField: "filteredItems.product",
+//           foreignField: "_id",
+//           as: "productDetails",
+//         },
+//       },
+//       { $unwind: "$productDetails" },
+//       {
+//         $lookup: {
+//           from: "categories",
+//           localField: "productDetails.category",
+//           foreignField: "_id",
+//           as: "categoryDetails",
+//         },
+//       },
+//       { $unwind: "$categoryDetails" },
+//       {
+//         $group: {
+//           _id: {
+//             date: {
+//               $dateToString: {
+//                 format: "%Y-%m-%d",
+//                 date: { $add: ["$createdAt", 7 * 60 * 60 * 1000] },
+//               },
+//             },
+//             customer: "$customer",
+//             category: "$categoryDetails._id",
+//           },
+          
+//           discountAmount: { $sum: "$discountAmount" },
+//           totalAfterDiscountAmount: {
+//             $sum: {
+//               $sum: {
+//                 $map: {
+//                   input: "$filteredItems",
+//                   as: "item",
+//                   in: { $multiply: ["$$item.currentPrice", "$$item.quantity"] },
+//                 },
+//               },
+//             },
+//           },
+//           customerInfo: { $first: "$customerDetails" },
+//           categoryName: { $first: "$categoryDetails.name" },
+//         },
+//       },
+//       {
+//         $project: {
+//           _id: 0,
+//           date: "$_id.date",
+//           customerId: "$customerInfo.CustomerId",
+//           customerName: "$customerInfo.fullName",
+//           phoneNumber: "$customerInfo.phoneNumber",
+//           address: {
+//             houseNumber: "$customerInfo.addressLines.houseNumber",
+//             ward: "$customerInfo.addressLines.ward",
+//             district: "$customerInfo.addressLines.district",
+//             province: "$customerInfo.addressLines.province",
+//           },
+//           category: "$categoryName",
+//           totalAmount: {
+//             $add: ["$totalAfterDiscountAmount"],
+//           },
+//           discountAmount: 1,
+//           totalAfterDiscountAmount: {
+//             $subtract: ["$totalAfterDiscountAmount", "$discountAmount"], 
+//           },
+//         },
+//       },
+//       { $sort: { date: 1, phoneNumber: 1 } },
+//     ]);
+
+//     res.json(data);
+//   } catch (error) {
+//     console.error("Error in getCustomerStatistics:", error);
+//     res.status(500).json({
+//       message: "Error retrieving customer statistics",
+//       error: error.message || error,
+//     });
+//   }
+// };
+const getCustomerStatistics = async (req, res) => {
   try {
     const { startDate, endDate, customerId } = req.query;
 
     if (!startDate || !endDate) {
-      return res
-        .status(400)
-        .json({ message: "startDate and endDate are required." });
+      return res.status(400).json({ message: "startDate and endDate are required." });
     }
 
     const start = new Date(startDate);
@@ -358,6 +485,12 @@ const getCustomerStatistics = async (req, res) => {
     const data = await Bill.aggregate([
       { $match: matchStage },
       {
+        $addFields: {
+          vietnamTime: { $add: ["$createdAt", 7 * 60 * 60 * 1000] },
+          actualTotalAmount: { $add: ["$totalAmount", "$discountAmount"] }
+        }
+      },
+      {
         $lookup: {
           from: "customers",
           localField: "customer",
@@ -367,21 +500,15 @@ const getCustomerStatistics = async (req, res) => {
       },
       { $unwind: "$customerDetails" },
       {
-        $addFields: {
-          // Loại bỏ các sản phẩm khuyến mãi (nếu `isGift` hoặc `price === 0`)
-          filteredItems: {
-            $filter: {
-              input: "$items",
-              as: "item",
-              cond: { $gt: ["$$item.currentPrice", 0] }, // Giữ sản phẩm có giá > 0
-            },
-          },
-        },
+        $unwind: {
+          path: "$items",
+          preserveNullAndEmptyArrays: true
+        }
       },
       {
         $lookup: {
           from: "products",
-          localField: "filteredItems.product",
+          localField: "items.product",
           foreignField: "_id",
           as: "productDetails",
         },
@@ -399,30 +526,36 @@ const getCustomerStatistics = async (req, res) => {
       {
         $group: {
           _id: {
-            date: {
-              $dateToString: {
-                format: "%Y-%m-%d",
-                date: { $add: ["$createdAt", 7 * 60 * 60 * 1000] },
-              },
-            },
+            billId: "$_id",
+            date: { $dateToString: { format: "%Y-%m-%d", date: "$vietnamTime" } },
             customer: "$customer",
-            category: "$categoryDetails._id",
-          },
-          discountAmount: { $sum: "$discountAmount" },
-          totalAfterDiscountAmount: {
-            $sum: {
-              $sum: {
-                $map: {
-                  input: "$filteredItems",
-                  as: "item",
-                  in: { $multiply: ["$$item.currentPrice", "$$item.quantity"] },
-                },
-              },
-            },
+            category: "$categoryDetails._id"
           },
           customerInfo: { $first: "$customerDetails" },
           categoryName: { $first: "$categoryDetails.name" },
-        },
+          actualTotalAmount: { $first: "$actualTotalAmount" },
+          totalAmount: { $first: "$totalAmount" },
+          discountAmount: { $first: "$discountAmount" },
+          itemsTotal: { 
+            $sum: { $multiply: ["$items.currentPrice", "$items.quantity"] }
+          }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            date: "$_id.date",
+            customer: "$_id.customer",
+            category: "$_id.category"
+          },
+          customerInfo: { $first: "$customerInfo" },
+          categoryName: { $first: "$categoryName" },
+          actualTotalAmount: { $sum: "$actualTotalAmount" },
+          totalAmount: { $sum: "$totalAmount" },
+          discountAmount: { $sum: "$discountAmount" },
+          itemsTotal: { $sum: "$itemsTotal" },
+          billCount: { $sum: 1 }
+        }
       },
       {
         $project: {
@@ -438,16 +571,14 @@ const getCustomerStatistics = async (req, res) => {
             province: "$customerInfo.addressLines.province",
           },
           category: "$categoryName",
-          totalAmount: {
-            $add: ["$totalAfterDiscountAmount"],
-          },
+          actualTotalAmount: 1,
+          totalAmount: 1,
           discountAmount: 1,
-          totalAfterDiscountAmount: {
-            $subtract: ["$totalAfterDiscountAmount", "$discountAmount"], 
-          },
-        },
+          itemsTotal: 1,
+          billCount: 1
+        }
       },
-      { $sort: { date: 1, phoneNumber: 1 } },
+      { $sort: { date: 1, phoneNumber: 1, category: 1 } },
     ]);
 
     res.json(data);
@@ -459,7 +590,6 @@ const getCustomerStatistics = async (req, res) => {
     });
   }
 };
-
 const getVoucherStatistics = async (req, res) => {
   try {
     const { startDate, endDate, voucherType } = req.query;
@@ -694,6 +824,7 @@ const getVoucherStatistics = async (req, res) => {
             productYId: { $first: "$productYDetails.code" },
             productYName: { $first: "$productYDetails.name" },
             quantityY: { $sum: "$giftItems.quantity" },
+            quantityY1: { $first: "$giftItems.quantity" },
             unitY: { $first: "$giftItems.unit" },
             conditions: {
               $addToSet: {
