@@ -1,6 +1,7 @@
 const express = require('express');
 const { addEmployee, verifyOTP, getAllEmployee, updateEmployee, deleteEmployee, getEmployeeById } = require('../controllers/employeeController');
 
+
 const router = express.Router();
 
 router.post('/add-employee', addEmployee);

@@ -331,6 +331,7 @@ const getDailyRevenue = async (req, res) => {
 };
 
 const getCustomerStatistics = async (req, res) => {
+
   try {
     const { startDate, endDate, customerId } = req.query;
 
@@ -458,6 +459,7 @@ const getCustomerStatistics = async (req, res) => {
     });
   }
 };
+
 const getVoucherStatistics = async (req, res) => {
   try {
     const { startDate, endDate, voucherType } = req.query;

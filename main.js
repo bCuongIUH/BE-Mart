@@ -20,6 +20,7 @@ const employeeRouter = require('./src/employee/routers/employeeRouter');
 const transactionRoutes = require('./src/warehouse/routes/TransactionRoutes');
 const customerRoutes = require('./src/customer/routers/customerRoutes');
 const statisticsRouter = require('./src/bill/routes/statisticsRouter');  
+const returnbillRouter = require('./src/bill/routes/billReturn');
 dotenv.config();
 const app = express();
 const cron = require('node-cron');
@@ -28,7 +29,7 @@ app.use(express.json());
 app.use(cookieParser());
 // Cấu hình CORS
 app.use(cors({
-  origin: ['http://localhost:3000','http://192.168.1.8:8081'],
+  origin: ['http://localhost:3000','http://192.168.1.9:8081'],
   credentials: true
 }));
 // app.use(cors()); 
@@ -53,6 +54,7 @@ app.use("/api/employees", employeeRouter);
 app.use("/api/transactions", transactionRoutes);
 app.use("/api/customers", customerRoutes);
 app.use('/api/statistics',statisticsRouter )
+app.use('/api/return',returnbillRouter )
 // Kết nối MongoDB
 mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => {

@@ -10,6 +10,7 @@ const Transaction = require('../../warehouse/models/Transaction');
 const mongoose = require("mongoose");
 // Tạo hóa đơn từ giỏ hàng 
 
+
 // exports.createBill = async (req, res) => {
 //   try {
 //     const { customerId, paymentMethod, itemIds, voucherCode } = req.body;
@@ -28,6 +29,14 @@ const mongoose = require("mongoose");
 //         message: "Giỏ hàng trống hoặc không có sản phẩm nào để thanh toán.",
 //       });
 //     }
+
+//     // Chuyển đổi dữ liệu items cho phù hợp
+//     const items = cart.items.map((item) => ({
+//       product: item.product._id.toString(), // Chỉ lấy ID sản phẩm
+//       unit: item.unit.toString(), // ID của đơn vị
+//       quantity: item.quantity,
+//       currentPrice: item.product.currentPrice,
+//     }));
 
 //     // Lọc các sản phẩm có trạng thái "ChoThanhToan" và được chọn để thanh toán
 //     const itemsToBill = cart.items.filter(
@@ -53,7 +62,7 @@ const mongoose = require("mongoose");
 //       }
 
 //       if (voucher.type === "BuyXGetY") {
-//         discount = await applyBuyXGetYDiscount(voucher, itemsToBill);
+//         discount = await applyBuyXGetYDiscount(voucher, items);
 //       } else if (voucher.type === "FixedDiscount") {
 //         discount = await applyFixedDiscount(voucher, totalAmount);
 //       } else if (voucher.type === "PercentageDiscount") {
@@ -124,8 +133,9 @@ const mongoose = require("mongoose");
 // };
 exports.createBill = async (req, res) => {
   try {
-    const { customerId, paymentMethod, itemIds, voucherCode } = req.body;
+    const { customerId, paymentMethod, itemIds, voucherCodes = [] } = req.body;
 
+    // Kiểm tra dữ liệu đầu vào
     if (!customerId || !paymentMethod || !itemIds || !Array.isArray(itemIds) || itemIds.length === 0) {
       return res.status(400).json({
         message: "Thiếu thông tin khách hàng, phương thức thanh toán hoặc sản phẩm được chọn.",
@@ -141,14 +151,6 @@ exports.createBill = async (req, res) => {
       });
     }
 
-    // Chuyển đổi dữ liệu items cho phù hợp
-    const items = cart.items.map((item) => ({
-      product: item.product._id.toString(), // Chỉ lấy ID sản phẩm
-      unit: item.unit.toString(), // ID của đơn vị
-      quantity: item.quantity,
-      currentPrice: item.product.currentPrice,
-    }));
-
     // Lọc các sản phẩm có trạng thái "ChoThanhToan" và được chọn để thanh toán
     const itemsToBill = cart.items.filter(
       (item) => itemIds.includes(item._id.toString()) && item.status === "ChoThanhToan"
@@ -162,43 +164,46 @@ exports.createBill = async (req, res) => {
 
     // Tính tổng tiền của các sản phẩm đã chọn
     let totalAmount = itemsToBill.reduce((acc, item) => acc + (item.totalPrice || 0), 0);
-
-    // Áp dụng voucher nếu có
     let discount = 0;
-    let appliedVoucher = null;
-    if (voucherCode) {
-      const voucher = await Voucher.findOne({ code: voucherCode, isActive: true });
+    let appliedVouchers = [];
+    let giftItems = [];
+
+    console.log("Items to bill:", itemsToBill.map(item => ({
+      productId: item.product._id.toString(),
+      unit: item.unit,
+      quantity: item.quantity,
+    })));
+
+    // Xử lý từng voucher
+    for (const code of voucherCodes) {
+      const voucher = await Voucher.findOne({ code, isActive: true, isDeleted: false });
       if (!voucher) {
-        return res.status(400).json({ message: "Voucher không hợp lệ hoặc đã hết hạn." });
+        console.log(`Voucher ${code} không hợp lệ hoặc đã hết hạn.`);
+        continue;
       }
 
       if (voucher.type === "BuyXGetY") {
-        discount = await applyBuyXGetYDiscount(voucher, items);
-      } else if (voucher.type === "FixedDiscount") {
-        discount = await applyFixedDiscount(voucher, totalAmount);
-      } else if (voucher.type === "PercentageDiscount") {
-        discount = await applyPercentageDiscount(voucher, totalAmount);
-      }
+        const result = await applyBuyXGetYDiscountApp(voucher, itemsToBill); // Truyền đúng itemsToBill
+        console.log("Result from applyBuyXGetYDiscount:", result);
+        if (result.gifts.length > 0) {
+          giftItems = [...giftItems, ...result.gifts];
+          appliedVouchers.push({ code, type: voucher.type });
+        }
+      } else if (voucher.type === "FixedDiscount" || voucher.type === "PercentageDiscount") {
+        const voucherDiscount = voucher.type === "FixedDiscount"
+          ? await applyFixedDiscount(voucher, totalAmount)
+          : await applyPercentageDiscount(voucher, totalAmount);
 
-      totalAmount -= discount;
-      appliedVoucher = voucher._id; // Lưu ID của voucher
+        if (voucherDiscount > 0) {
+          discount += voucherDiscount;
+          appliedVouchers.push({ code, type: voucher.type });
+        }
+      }
     }
 
-    // Tạo hóa đơn mới
-    const bill = new Bill({
-      customer: customerId,
-      items: itemsToBill,
-      totalAmount,
-      paymentMethod,
-      purchaseType: "Online",
-      discountAmount: discount,
-      appliedVoucher: appliedVoucher, // Lưu ID voucher
-      appliedVoucherCode: voucherCode || null, // Lưu mã voucher
-    });
+    totalAmount -= discount;
 
-    await bill.save();
-
-    // Trừ số lượng tồn kho và ghi lại giao dịch cho từng sản phẩm
+    // Kiểm tra tồn kho cho các sản phẩm đã chọn
     for (const item of itemsToBill) {
       const stock = await Stock.findOne({
         productId: item.product._id,
@@ -210,6 +215,14 @@ exports.createBill = async (req, res) => {
           message: `Sản phẩm ${item.product.name} không đủ số lượng tồn kho.`,
         });
       }
+    }
+
+    // Trừ tồn kho và ghi lại giao dịch
+    for (const item of itemsToBill) {
+      const stock = await Stock.findOne({
+        productId: item.product._id,
+        unit: item.unit,
+      });
 
       stock.quantity -= item.quantity;
       await stock.save();
@@ -226,22 +239,37 @@ exports.createBill = async (req, res) => {
       await transaction.save();
     }
 
+    // Tạo hóa đơn mới
+    const bill = new Bill({
+      customer: customerId,
+      items: itemsToBill,
+      totalAmount,
+      paymentMethod,
+      purchaseType: "Online",
+      discountAmount: discount,
+      appliedVouchers,
+      giftItems,
+      status: "HoanThanh", // Trạng thái mặc định
+    });
+
+    await bill.save();
+
     // Xóa các sản phẩm đã thanh toán khỏi giỏ hàng
     cart.items = cart.items.filter((item) => !itemIds.includes(item._id.toString()));
     await cart.save();
 
-    // Phản hồi lại với thông tin hóa đơn và voucher
     res.status(201).json({
       message: "Hóa đơn đã được tạo thành công và các sản phẩm đã được xóa khỏi giỏ hàng",
       bill,
-      appliedVoucherId: appliedVoucher,
-      appliedVoucherCode: voucherCode,
+      appliedVouchers,
+      giftItems,
     });
   } catch (error) {
-    console.error("Lỗi:", error);
-    res.status(500).json({ message: error.message });
+    console.error("Lỗi:", error.message);
+    res.status(500).json({ message: "Đã xảy ra lỗi không mong muốn, vui lòng thử lại." });
   }
 };
+
 
 
 // Tạo hóa đơn mua trực tiếp
@@ -249,7 +277,7 @@ exports.createBill = async (req, res) => {
 exports.createDirectPurchaseBill = async (req, res) => {
   try {
     const { paymentMethod, phoneNumber, items, createBy, voucherCodes = [], customerId } = req.body;
-console.log(req.body);
+
     if (!items || items.length === 0) {
       return res.status(400).json({ message: 'Danh sách sản phẩm không hợp lệ' });
     }
@@ -366,7 +394,47 @@ console.log(req.body);
   }
 };
 
+// hàm áp dụng km cho mobile
+async function applyBuyXGetYDiscountApp(voucher, items) {
+  const condition = await BuyXGetYVoucher.findOne({ voucherId: voucher._id });
+  if (!condition) {
 
+    return { discountAmount: 0, gifts: [] };
+  }
+  const productXId = condition.conditions[0].productXId.toString();
+  const unitX = condition.conditions[0].unitX;
+  const quantityX = condition.conditions[0].quantityX;
+
+ 
+  const eligibleItemX = items.find(
+    (item) =>
+      item.product._id.toString() === productXId &&
+      item.unit === unitX &&
+      item.quantity >= quantityX
+  );
+  if (!eligibleItemX) {
+ 
+    return { discountAmount: 0, gifts: [] };
+  }
+  const freeItemsCount = Math.floor(eligibleItemX.quantity / quantityX) * condition.conditions[0].quantityY;
+
+  if (freeItemsCount === 0) {
+    return { discountAmount: 0, gifts: [] };
+  }
+  const productYId = condition.conditions[0].productYId.toString();
+  const unitY = condition.conditions[0].unitY;
+  const gifts = [
+    {
+      product: productYId,
+      quantity: freeItemsCount,
+      unit: unitY,
+    },
+  ];
+
+  console.log("Gift items:", gifts);
+
+  return { discountAmount: 0, gifts };
+}
 
 
 
@@ -480,7 +548,7 @@ exports.getAllBills = async (req, res) => {
 // Lấy danh sách hóa đơn mua trực tuyến
 exports.getOnlineBills = async (req, res) => {
   try {
-    const bills = await Bill.find({ purchaseType: 'Online' }).populate('items.product').populate('customer');;
+    const bills = await Bill.find({ purchaseType: 'Online' , isDeleted: false }).populate('items.product').populate('customer');;
     // if (!bills || bills.length === 0) {
     //   return res.status(404).json({ message: 'Không có hóa đơn mua trực tuyến nào' });
     // }

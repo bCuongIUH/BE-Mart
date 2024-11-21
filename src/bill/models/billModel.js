@@ -15,7 +15,7 @@ const billSchema = new mongoose.Schema({
   discountAmount: { type: Number, default: 0 },
   status: { 
     type: String, 
-    enum: ['HoanThanh', 'HoanTra', 'Canceled'], 
+    enum: ['HoanThanh', 'HoanTra', 'Canceled','DangXuLy'], 
     default: 'HoanThanh' 
   },
   appliedVouchers: [
@@ -36,6 +36,7 @@ const billSchema = new mongoose.Schema({
   purchaseType: { type: String, enum: ['Online', 'Offline'], required: true },
   createBy: { type: mongoose.Schema.Types.ObjectId, ref: 'EmployeeManagement' },
   createdAt: { type: Date, default: Date.now },
+  isDeleted: { type: Boolean, default: false },
 });
 
 // Middleware để tạo hoặc cập nhật billCode
