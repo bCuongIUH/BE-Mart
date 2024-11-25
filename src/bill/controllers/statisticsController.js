@@ -624,10 +624,20 @@ const getVoucherStatistics = async (req, res) => {
       },
       {
         $group: {
-          _id: "$appliedVouchers.code",
+          _id: {
+            billId: "$_id",
+            voucherCode: "$appliedVouchers.code"
+          },
+          discountAmount: { $first: "$discountAmount" },
+          voucherType: { $first: "$appliedVouchers.type" }
+        }
+      },
+      {
+        $group: {
+          _id: "$_id.voucherCode",
           totalDiscountAmount: { $sum: "$discountAmount" },
           usageCount: { $sum: 1 },
-          voucherType: { $first: "$appliedVouchers.type" },
+          voucherType: { $first: "$voucherType" },
         },
       },
       {
@@ -690,24 +700,9 @@ const getVoucherStatistics = async (req, res) => {
                         as: "existing",
                         in: {
                           $and: [
-                            {
-                              $eq: [
-                                "$$existing.productXId",
-                                "$$this.productXId",
-                              ],
-                            },
-                            {
-                              $eq: [
-                                "$$existing.discountAmount",
-                                "$$this.discountAmount",
-                              ],
-                            },
-                            {
-                              $eq: [
-                                "$$existing.discountPercentage",
-                                "$$this.discountPercentage",
-                              ],
-                            },
+                            { $eq: ["$$existing.productXId", "$$this.productXId"] },
+                            { $eq: ["$$existing.discountAmount", "$$this.discountAmount"] },
+                            { $eq: ["$$existing.discountPercentage", "$$this.discountPercentage"] },
                           ],
                         },
                       },
@@ -779,12 +774,7 @@ const getVoucherStatistics = async (req, res) => {
           },
         },
         { $unwind: "$buyXGetYConditions" },
-        {
-          $unwind: {
-            path: "$buyXGetYConditions.conditions",
-            preserveNullAndEmptyArrays: true,
-          },
-        },
+        { $unwind: "$buyXGetYConditions.conditions" },
         {
           $lookup: {
             from: "products",
@@ -793,49 +783,84 @@ const getVoucherStatistics = async (req, res) => {
             as: "productXDetails",
           },
         },
-        {
-          $unwind: {
-            path: "$productXDetails",
-            preserveNullAndEmptyArrays: true,
-          },
-        },
-        { $unwind: "$giftItems" },
+        { $unwind: "$productXDetails" },
         {
           $lookup: {
             from: "products",
-            localField: "giftItems.product",
+            localField: "buyXGetYConditions.conditions.productYId",
             foreignField: "_id",
             as: "productYDetails",
           },
         },
-        {
-          $unwind: {
-            path: "$productYDetails",
-            preserveNullAndEmptyArrays: true,
-          },
-        },
+        { $unwind: "$productYDetails" },
+        { $unwind: "$giftItems" },
         {
           $group: {
-            _id: "$voucherDetails.code",
+            _id: {
+              billId: "$_id",
+              voucherCode: "$voucherDetails.code",
+              productYId: "$buyXGetYConditions.conditions.productYId",
+              unitY: "$buyXGetYConditions.conditions.unitY"
+            },
             voucherCode: { $first: "$voucherDetails.code" },
-            voucherName: { $first: "Mua hàng tặng hàng" },
+            voucherName: { $first: "$voucherDetails.name" },
             startDate: { $first: "$promotionProgramDetails.startDate" },
             endDate: { $first: "$promotionProgramDetails.endDate" },
             productYId: { $first: "$productYDetails.code" },
             productYName: { $first: "$productYDetails.name" },
             quantityY: { $sum: "$giftItems.quantity" },
-            quantityY1: { $first: "$giftItems.quantity" },
-            unitY: { $first: "$giftItems.unit" },
+            unitY: { $first: "$buyXGetYConditions.conditions.unitY" },
             conditions: {
               $addToSet: {
                 productXId: "$buyXGetYConditions.conditions.productXId",
+                productXName: "$productXDetails.name",
                 quantityX: "$buyXGetYConditions.conditions.quantityX",
                 unitX: "$buyXGetYConditions.conditions.unitX",
-                productXName: "$productXDetails.name",
+                quantityY: "$buyXGetYConditions.conditions.quantityY",
+                unitY: "$buyXGetYConditions.conditions.unitY",
               },
             },
           },
         },
+        {
+          $group: {
+            _id: {
+              voucherCode: "$voucherCode",
+              productYId: "$productYId",
+              unitY: "$unitY"
+            },
+            voucherCode: { $first: "$voucherCode" },
+            voucherName: { $first: "$voucherName" },
+            startDate: { $first: "$startDate" },
+            endDate: { $first: "$endDate" },
+            productYId: { $first: "$productYId" },
+            productYName: { $first: "$productYName" },
+            quantityY: { $sum: "$quantityY" },
+            unitY: { $first: "$unitY" },
+            conditions: { $first: "$conditions" },
+            usageCount: { $sum: 1 },
+          },
+        },
+        {
+          $group: {
+            _id: "$voucherCode",
+            voucherCode: { $first: "$voucherCode" },
+            voucherName: { $first: "$voucherName" },
+            startDate: { $first: "$startDate" },
+            endDate: { $first: "$endDate" },
+            giftProducts: {
+              $push: {
+                productYId: "$productYId",
+                productYName: "$productYName",
+                quantityY: "$quantityY",
+                unitY: "$unitY",
+              },
+            },
+            conditions: { $first: "$conditions" },
+            usageCount: { $sum: "$usageCount" },
+          },
+        },
+        { $sort: { usageCount: -1 } },
       ]);
     }
 
@@ -851,5 +876,6 @@ const getVoucherStatistics = async (req, res) => {
     });
   }
 };
+
 
 module.exports = { getDailyRevenue, getStatistics, getCustomerStatistics, getVoucherStatistics };

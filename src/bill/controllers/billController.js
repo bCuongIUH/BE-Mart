@@ -1,3 +1,5 @@
+const axios = require('axios');
+const crypto = require('crypto');
 const Bill = require('../models/billModel');
 const Cart = require('../../cart/model/cart');
 const Product = require('../../products/models/product');
@@ -9,6 +11,7 @@ const BuyXGetYVoucher = require('../../promotion/models/BuyXGetYVoucher');
 const Transaction = require('../../warehouse/models/Transaction');
 const mongoose = require("mongoose");
 const Customer = require('../../customer/models/Customer');
+
 // Tạo hóa đơn từ giỏ hàng 
 
 
@@ -275,25 +278,53 @@ exports.createBill = async (req, res) => {
 
 // Tạo hóa đơn mua trực tiếp
 
+
 // exports.createDirectPurchaseBill = async (req, res) => {
 //   try {
 //     const { paymentMethod, phoneNumber, items, createBy, voucherCodes = [], customerId } = req.body;
+//     console.log("Payload từ FE:", req.body);
 
 //     if (!items || items.length === 0) {
 //       return res.status(400).json({ message: 'Danh sách sản phẩm không hợp lệ' });
 //     }
 
-//     // Kiểm tra nếu voucherCodes không phải là mảng
 //     if (!Array.isArray(voucherCodes)) {
 //       return res.status(400).json({ message: 'voucherCodes phải là mảng hợp lệ' });
 //     }
 
+//     let customer;
+
+//     // Kiểm tra khách hàng
+//     if (customerId) {
+//       // Lấy thông tin khách hàng từ `customerId`
+//       customer = await Customer.findById(customerId);
+//       if (!customer) {
+//         return res.status(404).json({ message: 'Không tìm thấy thông tin khách hàng' });
+//       }
+//     } else if (phoneNumber) {
+//       // Tìm khách hàng theo số điện thoại
+//       customer = await Customer.findOne({ phoneNumber });
+
+//       if (!customer) {
+//         // Nếu khách hàng không tồn tại, tạo khách hàng mới với số điện thoại
+//         customer = new Customer({
+//           fullName: 'Khách vãng lai', // Tên mặc định
+//           phoneNumber,
+//           joinDate: Date.now(),
+//           isRegistered: false, // Khách chưa có tài khoản
+//         });
+//         await customer.save();
+//       }
+//     } else {
+//       return res.status(400).json({ message: 'Số điện thoại là bắt buộc đối với khách hàng chưa có tài khoản' });
+//     }
+
+//     // Tính toán tổng số tiền và giảm giá
 //     let totalAmount = items.reduce((acc, item) => acc + item.currentPrice * item.quantity, 0);
 //     let discount = 0;
 //     let appliedVouchers = [];
 //     let giftItems = [];
 
-//     // Xử lý từng voucher
 //     for (const code of voucherCodes) {
 //       const voucher = await Voucher.findOne({ code, isActive: true, isDeleted: false });
 //       if (!voucher) {
@@ -321,26 +352,26 @@ exports.createBill = async (req, res) => {
 
 //     totalAmount -= discount;
 
+//     // Kiểm tra tồn kho
 //     const stockList = await Stock.find({
 //       productId: { $in: items.map(item => item.product) },
 //       unit: { $in: items.map(item => item.unit) },
 //     });
-    
+
 //     for (const item of items) {
 //       const stock = stockList.find(
 //         (s) => s.productId.toString() === item.product && s.unit === item.unit
 //       );
-    
+
 //       const product = await Product.findOne({ _id: item.product });
 //       const productName = product ? product.name : "Không xác định";
-    
+
 //       if (!stock || stock.quantity < item.quantity) {
 //         return res.status(400).json({
 //           message: `Sản phẩm "${productName}" với đơn vị "${item.unit}" không đủ số lượng tồn kho.`,
 //         });
 //       }
 //     }
-    
 
 //     // Trừ tồn kho và ghi lại giao dịch
 //     for (const item of items) {
@@ -368,11 +399,11 @@ exports.createBill = async (req, res) => {
 
 //     // Tạo hóa đơn
 //     const bill = new Bill({
-//       customer: customerId || null,
+//       customer: customer._id,
 //       items,
 //       totalAmount,
 //       paymentMethod,
-//       phoneNumber: phoneNumber || '',
+//       phoneNumber: phoneNumber || customer.phoneNumber, // Lưu số điện thoại nếu có
 //       purchaseType: 'Offline',
 //       createBy,
 //       discountAmount: discount,
@@ -394,17 +425,31 @@ exports.createBill = async (req, res) => {
 //     res.status(500).json({ message: "Đã xảy ra lỗi không mong muốn, vui lòng thử lại." });
 //   }
 // };
+
 exports.createDirectPurchaseBill = async (req, res) => {
   try {
-    const { paymentMethod, phoneNumber, items, createBy, voucherCodes = [], customerId } = req.body;
+    const {
+      paymentMethod,
+      phoneNumber,
+      items,
+      createBy,
+      voucherCodes = [],
+      customerId,
+      status,
+      orderCode,
+    } = req.body;
     console.log("Payload từ FE:", req.body);
 
     if (!items || items.length === 0) {
-      return res.status(400).json({ message: 'Danh sách sản phẩm không hợp lệ' });
+      return res
+        .status(400)
+        .json({ message: "Danh sách sản phẩm không hợp lệ" });
     }
 
     if (!Array.isArray(voucherCodes)) {
-      return res.status(400).json({ message: 'voucherCodes phải là mảng hợp lệ' });
+      return res
+        .status(400)
+        .json({ message: "voucherCodes phải là mảng hợp lệ" });
     }
 
     let customer;
@@ -414,7 +459,9 @@ exports.createDirectPurchaseBill = async (req, res) => {
       // Lấy thông tin khách hàng từ `customerId`
       customer = await Customer.findById(customerId);
       if (!customer) {
-        return res.status(404).json({ message: 'Không tìm thấy thông tin khách hàng' });
+        return res
+          .status(404)
+          .json({ message: "Không tìm thấy thông tin khách hàng" });
       }
     } else if (phoneNumber) {
       // Tìm khách hàng theo số điện thoại
@@ -423,7 +470,7 @@ exports.createDirectPurchaseBill = async (req, res) => {
       if (!customer) {
         // Nếu khách hàng không tồn tại, tạo khách hàng mới với số điện thoại
         customer = new Customer({
-          fullName: 'Khách vãng lai', // Tên mặc định
+          fullName: "Khách vãng lai", // Tên mặc định
           phoneNumber,
           joinDate: Date.now(),
           isRegistered: false, // Khách chưa có tài khoản
@@ -431,17 +478,27 @@ exports.createDirectPurchaseBill = async (req, res) => {
         await customer.save();
       }
     } else {
-      return res.status(400).json({ message: 'Số điện thoại là bắt buộc đối với khách hàng chưa có tài khoản' });
+      return res.status(400).json({
+        message:
+          "Số điện thoại là bắt buộc đối với khách hàng chưa có tài khoản",
+      });
     }
 
     // Tính toán tổng số tiền và giảm giá
-    let totalAmount = items.reduce((acc, item) => acc + item.currentPrice * item.quantity, 0);
+    let totalAmount = items.reduce(
+      (acc, item) => acc + item.currentPrice * item.quantity,
+      0
+    );
     let discount = 0;
     let appliedVouchers = [];
     let giftItems = [];
 
     for (const code of voucherCodes) {
-      const voucher = await Voucher.findOne({ code, isActive: true, isDeleted: false });
+      const voucher = await Voucher.findOne({
+        code,
+        isActive: true,
+        isDeleted: false,
+      });
       if (!voucher) {
         console.log(`Voucher ${code} không hợp lệ hoặc đã hết hạn.`);
         continue;
@@ -453,10 +510,14 @@ exports.createDirectPurchaseBill = async (req, res) => {
           giftItems = [...giftItems, ...result.gifts];
           appliedVouchers.push({ code, type: voucher.type });
         }
-      } else if (voucher.type === "FixedDiscount" || voucher.type === "PercentageDiscount") {
-        const voucherDiscount = voucher.type === "FixedDiscount"
-          ? await applyFixedDiscount(voucher, totalAmount)
-          : await applyPercentageDiscount(voucher, totalAmount);
+      } else if (
+        voucher.type === "FixedDiscount" ||
+        voucher.type === "PercentageDiscount"
+      ) {
+        const voucherDiscount =
+          voucher.type === "FixedDiscount"
+            ? await applyFixedDiscount(voucher, totalAmount)
+            : await applyPercentageDiscount(voucher, totalAmount);
 
         if (voucherDiscount > 0) {
           discount += voucherDiscount;
@@ -469,8 +530,8 @@ exports.createDirectPurchaseBill = async (req, res) => {
 
     // Kiểm tra tồn kho
     const stockList = await Stock.find({
-      productId: { $in: items.map(item => item.product) },
-      unit: { $in: items.map(item => item.unit) },
+      productId: { $in: items.map((item) => item.product) },
+      unit: { $in: items.map((item) => item.unit) },
     });
 
     for (const item of items) {
@@ -519,28 +580,30 @@ exports.createDirectPurchaseBill = async (req, res) => {
       totalAmount,
       paymentMethod,
       phoneNumber: phoneNumber || customer.phoneNumber, // Lưu số điện thoại nếu có
-      purchaseType: 'Offline',
+      purchaseType: "Offline",
       createBy,
       discountAmount: discount,
       appliedVouchers,
       giftItems,
-      status: 'HoanThanh', // Mặc định trạng thái là 'HoanThanh'
+      orderCode,
+      status: status || "HoanThanh",
     });
 
     await bill.save();
 
     res.status(201).json({
-      message: 'Hóa đơn đã được tạo thành công',
+      message: "Hóa đơn đã được tạo thành công",
       bill,
       appliedVouchers,
       giftItems,
     });
   } catch (error) {
     console.error("Lỗi:", error.message);
-    res.status(500).json({ message: "Đã xảy ra lỗi không mong muốn, vui lòng thử lại." });
+    res
+      .status(500)
+      .json({ message: "Đã xảy ra lỗi không mong muốn, vui lòng thử lại." });
   }
 };
-
 // hàm áp dụng km cho mobile
 async function applyBuyXGetYDiscountApp(voucher, items) {
   const condition = await BuyXGetYVoucher.findOne({ voucherId: voucher._id });
@@ -636,7 +699,7 @@ async function applyBuyXGetYDiscount(voucher, items) {
     },
   ];
 
-  console.log("Gift items:", gifts);
+  // console.log("Gift items:", gifts);
 
   return { discountAmount: 0, gifts };
 }
@@ -695,15 +758,20 @@ exports.getAllBills = async (req, res) => {
 // Lấy danh sách hóa đơn mua trực tuyến
 exports.getOnlineBills = async (req, res) => {
   try {
-    const bills = await Bill.find({ purchaseType: 'Online' , isDeleted: false }).populate('items.product').populate('customer');;
-    // if (!bills || bills.length === 0) {
-    //   return res.status(404).json({ message: 'Không có hóa đơn mua trực tuyến nào' });
-    // }
+    const bills = await Bill.find({
+      purchaseType: 'Online',
+      isDeleted: false,
+      status: { $ne: 'HoanTra' } 
+    })
+    .populate('items.product')
+    .populate('customer');
+
     res.status(200).json(bills); 
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
+
 //mua hàng trực tiếp
 exports.getOfflineBills = async (req, res) => {
   try {
@@ -731,6 +799,35 @@ exports.getBillsByStatus = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+//update chothanhtoan -> hoanthanh của vnpay
+exports.updateBillStatusByCode = async (req, res) => {
+  try {
+    const { orderCode, status } = req.body;
+
+    if (!orderCode || !status) {
+      return res
+        .status(400)
+        .json({ message: "Vui lòng cung cấp mã đơn hàng và trạng thái" });
+    }
+
+    // Tìm hóa đơn theo mã đơn hàng (orderCode)
+    const bill = await Bill.findOne({ orderCode });
+    if (!bill) {
+      return res.status(404).json({ message: "Hóa đơn không tồn tại" });
+    }
+
+    // Cập nhật trạng thái
+    bill.status = status;
+    await bill.save();
+
+    res
+      .status(200)
+      .json({ message: "Trạng thái hóa đơn đã được cập nhật", bill });
+  } catch (error) {
+    console.error("Lỗi khi cập nhật trạng thái hóa đơn:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
 
 // Cập nhật trạng thái hóa đơn (ví dụ: từ 'Pending' sang 'Paid')
 exports.updateBillStatus = async (req, res) => {
@@ -749,7 +846,7 @@ exports.updateBillStatus = async (req, res) => {
 };
 
 
-//hoàn trả bill
+//hoàn trả bill ở web offline
 exports.returnPurchaseBill = async (req, res) => {
   try {
     const { billId, returnedItems } = req.body;

@@ -1,4 +1,5 @@
 const Bill = require('../../bill/models/billModel');
+const uploadImageToCloudinary = require('../../upload/uploadImage');
 const ReturnRequest = require('../models/ReturnRequest');
 
 // Hàm xóa hóa đơn
@@ -23,98 +24,143 @@ exports.deleteBill = async (req, res) => {
     }
   };
   
+
+
 // Tạo yêu cầu trả hàng
 exports.createReturnRequest = async (req, res) => {
-    const { billId, reason, images } = req.body;
-  
-    if (!billId || !reason) {
+  const { billId, reason } = req.body;
+  console.log('File uploaded:', req.body);
+  if (!billId || !reason) {
       return res.status(400).json({ message: 'Thiếu thông tin hóa đơn hoặc lý do trả hàng.' });
-    }
-  
-    try {
+  }
+
+  try {
       // Kiểm tra hóa đơn
       const bill = await Bill.findById(billId);
       if (!bill) {
-        return res.status(404).json({ message: 'Hóa đơn không tồn tại.' });
+          return res.status(404).json({ message: 'Hóa đơn không tồn tại.' });
       }
-  
+
       // Nếu hóa đơn đã ở trạng thái HoanTra hoặc Canceled, không thể yêu cầu hoàn trả nữa
       if (['HoanTra', 'Canceled'].includes(bill.status)) {
-        return res.status(400).json({ message: 'Không thể tạo yêu cầu hoàn trả cho hóa đơn đã xử lý.' });
+          return res.status(400).json({ message: 'Không thể tạo yêu cầu hoàn trả cho hóa đơn đã xử lý.' });
       }
-  
+
+      let uploadedImages = [];
+      if (req.file) {
+          // Upload ảnh lên Cloudinary
+          const uploadedUrl = await uploadImageToCloudinary(req.file.path, 'return-requests');
+          uploadedImages.push(uploadedUrl);
+      }
+
       // Tạo yêu cầu hoàn trả
       const returnRequest = new ReturnRequest({
-        bill: billId,
-        reason,
-        images: images || [],
+          bill: billId,
+          reason,
+          images: uploadedImages,
       });
-  
+
       // Lưu yêu cầu hoàn trả
       await returnRequest.save();
-  
+
       // Cập nhật trạng thái hóa đơn thành DangXuLy
       bill.status = 'DangXuLy';
       await bill.save();
-  
+
       res.status(201).json({
-        message: 'Yêu cầu trả hàng đã được tạo thành công.',
-        data: returnRequest,
+          message: 'Yêu cầu trả hàng đã được tạo thành công.',
+          data: returnRequest,
+      });
+  } catch (error) {
+      console.error('Lỗi khi tạo yêu cầu trả hàng:', error);
+      res.status(500).json({ message: 'Đã xảy ra lỗi, vui lòng thử lại sau.' });
+  }
+};
+
+  
+ 
+  // Lấy tất cả yêu cầu trả hàng
+  exports.getAllReturnRequests = async (req, res) => {
+    try {
+      const billsWithReturnRequests = await Bill.aggregate([
+        {
+          $match: {
+            purchaseType: 'Online',
+            isDeleted: false,
+          },
+        },
+        {
+          $lookup: {
+            from: 'returnrequests', // Collection của ReturnRequest
+            localField: '_id', // Trường để nối
+            foreignField: 'bill', // Trường trong ReturnRequest liên kết với Bill
+            as: 'returnRequests', // Kết quả trả về
+          },
+        },
+        {
+          $project: {
+            _id: 1,
+            customer: 1,
+            items: 1,
+            totalAmount: 1,
+            status: 1,
+            paymentMethod: 1,
+            purchaseType: 1,
+            isDeleted: 1,
+            createdAt: 1,
+            billCode: 1,
+            returnRequests: 1, // Bao gồm các yêu cầu trả hàng liên kết
+          },
+        },
+      ]);
+  
+      res.status(200).json({
+        data: billsWithReturnRequests,
+        message: 'Danh sách hóa đơn mua Online cùng với thông tin yêu cầu hoàn trả.',
       });
     } catch (error) {
-      console.error('Lỗi khi tạo yêu cầu trả hàng:', error);
+      console.error('Lỗi khi lấy danh sách hóa đơn có yêu cầu hoàn trả:', error);
       res.status(500).json({ message: 'Đã xảy ra lỗi, vui lòng thử lại sau.' });
     }
   };
+
+  //cập nhật trạng thái của bill
+  exports.updateBillStatusOnl = async (req, res) => {
+    const { billId, action } = req.body;
+  console.log(req.body);
   
-  // Xử lý trạng thái yêu cầu hoàn trả
-  exports.handleReturnRequest = async (req, res) => {
-    const { requestId } = req.params;
-    const { action } = req.body; // 'accept' hoặc 'reject'
-  
-    if (!['accept', 'reject'].includes(action)) {
-      return res.status(400).json({ message: 'Hành động không hợp lệ.' });
+    if (!billId || !action) {
+      return res.status(400).json({ message: "Thiếu thông tin hóa đơn hoặc hành động." });
     }
   
     try {
-      // Lấy yêu cầu hoàn trả
-      const returnRequest = await ReturnRequest.findById(requestId).populate('bill');
-      if (!returnRequest) {
-        return res.status(404).json({ message: 'Yêu cầu hoàn trả không tồn tại.' });
-      }
-  
-      // Lấy hóa đơn liên quan
-      const bill = await Bill.findById(returnRequest.bill);
+      // Lấy thông tin hóa đơn
+      const bill = await Bill.findById(billId);
       if (!bill) {
-        return res.status(404).json({ message: 'Hóa đơn không tồn tại.' });
+        return res.status(404).json({ message: "Không tìm thấy hóa đơn." });
       }
   
-      if (action === 'accept') {
-        // Cập nhật trạng thái hóa đơn thành HoanTra
-        bill.status = 'HoanTra';
-      } else if (action === 'reject') {
-        // Cập nhật trạng thái hóa đơn thành Canceled
-        bill.status = 'Canceled';
+      // Xử lý cập nhật trạng thái
+      let updatedStatus = "";
+      if (bill.status === "DangXuLy") {
+        updatedStatus = action === "accept" ? "KiemHang" : "Canceled";
+      } else if (bill.status === "KiemHang") {
+        updatedStatus = action === "accept" ? "HoanTra" : "Canceled";
+      } else {
+        return res.status(400).json({ message: "Trạng thái hiện tại không thể cập nhật." });
       }
   
+      // Cập nhật trạng thái hóa đơn
+      bill.status = updatedStatus;
       await bill.save();
   
       res.status(200).json({
-        message: `Yêu cầu trả hàng đã được ${action === 'accept' ? 'chấp nhận' : 'từ chối'}.`,
+        success: true,
+        message: `Trạng thái hóa đơn đã được cập nhật thành công: ${updatedStatus}`,
         data: bill,
       });
     } catch (error) {
-      console.error('Lỗi khi xử lý yêu cầu trả hàng:', error);
-      res.status(500).json({ message: 'Đã xảy ra lỗi, vui lòng thử lại sau.' });
-    }
-  };
-  // Lấy tất cả yêu cầu trả hàng
-exports.getAllReturnRequests = async (req, res) => {
-    try {
-      const returnRequests = await ReturnRequest.find().populate('bill');
-      res.status(200).json({ data: returnRequests });
-    } catch (error) {
-      console.error('Lỗi khi lấy danh sách yêu cầu trả hàng:', error);
-      res.status(500).json({ message: 'Đã xảy ra lỗi, vui lòng thử lại sau.' });
+      console.error("Lỗi khi cập nhật trạng thái hóa đơn:", error);
+      res.status(500).json({ message: "Đã xảy ra lỗi, vui lòng thử lại sau." });
     }
   };
