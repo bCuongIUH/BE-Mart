@@ -31,7 +31,7 @@ app.use(express.json());
 app.use(cookieParser());
 // Cấu hình CORS
 app.use(cors({
-  origin: ['http://localhost:3000','http://192.168.1.9:8081'],
+  origin: ['http://localhost:3000','http://192.168.1.9:8081','https://fe-mart-4e3l.vercel.app','https://be-mart-bachcuong27-gmailcoms-projects.vercel.app'],
   credentials: true
 }));
 // app.use(cors()); 
