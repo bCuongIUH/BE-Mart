@@ -876,6 +876,118 @@ const getVoucherStatistics = async (req, res) => {
     });
   }
 };
+//top 5 doanh số
+const getTop5CustomersByRevenue = async (req, res) => {
+  try {
+    // Không cần tham số startDate, endDate nữa
+    const data = await Bill.aggregate([
+      {
+        $match: {
+          status: "HoanThanh", 
+        }
+      },
+      {
+        $addFields: {
+          actualTotalAmount: { $add: ["$totalAmount"] } 
+        }
+      },
+      {
+        $lookup: {
+          from: "customers",
+          localField: "customer",
+          foreignField: "_id",
+          as: "customerDetails",
+        },
+      },
+      { $unwind: "$customerDetails" },
+      {
+        $group: {
+          _id: "$customer",
+          customerName: { $first: "$customerDetails.fullName" },
+          customerId: { $first: "$customerDetails.CustomerId" },
+          totalSpent: { $sum: "$actualTotalAmount" },
+        }
+      },
+      {
+        $sort: { totalSpent: -1 } // Sắp xếp theo tổng tiền chi tiêu từ cao đến thấp
+      },
+      {
+        $limit: 5 // Lấy 5 khách hàng đứng đầu
+      },
+      {
+        $project: {
+          _id: 0,
+          customerId: 1,
+          customerName: 1,
+          totalSpent: 1,
+        },
+      },
+    ]);
 
+    res.json(data);
+  } catch (error) {
+    console.error("Error in getTop5Customers:", error);
+    res.status(500).json({
+      message: "Error retrieving top 5 customers data",
+      error: error.message || error,
+    });
+  }
+};
+//top 5 sản phẩm
+const getTop5SellingProducts = async (req, res) => {
+  try {
+    // Dữ liệu sẽ không lọc theo ngày, sẽ lấy tất cả các hóa đơn
+    const data = await Bill.aggregate([
+      {
+        $unwind: "$items" // Mỗi sản phẩm trong đơn hàng sẽ trở thành một đối tượng riêng biệt
+      },
+      {
+        $group: {
+          _id: "$items.product", // Nhóm theo sản phẩm
+          totalQuantity: { $sum: "$items.quantity" }, // Tổng số lượng bán ra
+          totalRevenue: { $sum: { $multiply: ["$items.currentPrice", "$items.quantity"] } }, // Tổng doanh thu từ sản phẩm
+        }
+      },
+      {
+        $lookup: {
+          from: "products", 
+          localField: "_id",
+          foreignField: "_id",
+          as: "productDetails"
+        }
+      },
+      {
+        $unwind: "$productDetails" // Trả về một sản phẩm duy nhất
+      },
+      {
+        $project: {
+          _id: 0,
+          productId: "$_id",
+          productcode : "$productDetails.code",
+          productName: "$productDetails.name",
+          totalQuantity: 1,
+          totalRevenue: 1,
+          productImage: "$productDetails.imageUrl",
+          baseUnit: "$productDetails.unit",
+        }
+      },
+      {
+        $sort: { totalQuantity: -1 } // Sắp xếp sản phẩm theo tổng số lượng bán ra giảm dần
+      },
+      {
+        $limit: 5 // Lấy 5 sản phẩm bán chạy nhất
+      }
+    ]);
 
-module.exports = { getDailyRevenue, getStatistics, getCustomerStatistics, getVoucherStatistics };
+    // Trả kết quả
+    res.json(data);
+  } catch (error) {
+    console.error("Error in getTop5SellingProducts:", error);
+    res.status(500).json({
+      message: "Error retrieving top 5 selling products",
+      error: error.message || error,
+    });
+  }
+};
+
+module.exports = { getDailyRevenue, getStatistics, getCustomerStatistics, getVoucherStatistics,getTop5CustomersByRevenue,getTop5SellingProducts };

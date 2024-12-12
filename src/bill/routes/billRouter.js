@@ -1,5 +1,5 @@
 const express = require('express');
-const { createBill, getBillsByUser, getBillsByStatus, updateBillStatus, createDirectPurchaseBill, getAllBills,getOnlineBills,getOfflineBills, createDirectPurchaseBillKM, returnPurchaseBill ,updateBillStatusByCode} = require('../controllers/billController');
+const { createBill, getBillsByUser, getBillsByStatus, updateBillStatus, createDirectPurchaseBill, getAllBills,getOnlineBills,getOfflineBills, createDirectPurchaseBillKM, returnPurchaseBill ,updateBillStatusByCode, getOnlineBillsThongKe} = require('../controllers/billController');
 const { deleteBill } = require('../controllers/CRUDBillController');
 const router = express.Router();
 
@@ -13,6 +13,7 @@ router.post('/return-bill', returnPurchaseBill);
 router.get('/user', getBillsByUser);
 router.get('/all', getAllBills);
 router.get('/online', getOnlineBills);
+router.get('/onlineTK', getOnlineBillsThongKe);
 router.get('/offline', getOfflineBills);
 // Lấy hóa đơn theo trạng thái 
 router.get('/status', getBillsByStatus);

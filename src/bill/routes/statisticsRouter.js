@@ -4,6 +4,8 @@ const {
   getDailyRevenue,
   getCustomerStatistics,
   getVoucherStatistics,
+  getTop5CustomersByRevenue,
+  getTop5SellingProducts,
 } = require("../controllers/statisticsController");
 
 const router = express.Router();
@@ -18,4 +20,6 @@ router.get("/daily-revenue", getDailyRevenue);
 router.get("/customer-statistics", getCustomerStatistics);
 
 router.get("/voucher-statistics", getVoucherStatistics);
+router.get("/top5customer", getTop5CustomersByRevenue);
+router.get("/top5product", getTop5SellingProducts)
 module.exports = router;

@@ -477,6 +477,11 @@ exports.createDirectPurchaseBill = async (req, res) => {
         });
         await customer.save();
       }
+      if (status === "ChuaThanhToan") {
+        return res
+          .status(400)
+          .json({ message: "Không thể tạo giao dịch với hóa đơn chưa thanh toán" });
+      }
     } else {
       return res.status(400).json({
         message:
@@ -761,6 +766,21 @@ exports.getOnlineBills = async (req, res) => {
     const bills = await Bill.find({
       purchaseType: 'Online',
       isDeleted: false,
+      // status: { $ne: 'HoanTra' } 
+    })
+    .populate('items.product')
+    .populate('customer');
+
+    res.status(200).json(bills); 
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+exports.getOnlineBillsThongKe = async (req, res) => {
+  try {
+    const bills = await Bill.find({
+      purchaseType: 'Online',
+      isDeleted: false,
       status: { $ne: 'HoanTra' } 
     })
     .populate('items.product')
@@ -771,11 +791,10 @@ exports.getOnlineBills = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
 //mua hàng trực tiếp
 exports.getOfflineBills = async (req, res) => {
   try {
-    const bills = await Bill.find({ purchaseType: 'Offline' }).populate('items.product');
+    const bills = await Bill.find({ purchaseType: 'Offline' , status: { $ne: 'ChuaThanhToan' } }).populate('items.product');
     if (!bills || bills.length === 0) {
       return res.status(404).json({ message: 'Không có hóa đơn mua trực tuyến nào' });
     }
