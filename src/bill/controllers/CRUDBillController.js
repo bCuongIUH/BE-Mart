@@ -1,7 +1,8 @@
 const Bill = require('../../bill/models/billModel');
 const uploadImageToCloudinary = require('../../upload/uploadImage');
+const Stock = require('../../warehouse/models/Stock');
 const ReturnRequest = require('../models/ReturnRequest');
-
+const mongoose = require('mongoose');
 // Hàm xóa hóa đơn
 exports.deleteBill = async (req, res) => {
     try {
@@ -124,43 +125,70 @@ exports.createReturnRequest = async (req, res) => {
     }
   };
 
-  //cập nhật trạng thái của bill
-  exports.updateBillStatusOnl = async (req, res) => {
-    const { billId, action } = req.body;
+
+//cập nhật trạng thái bill
+exports.updateBillStatusOnl = async (req, res) => {
+  const { billId, action } = req.body;
   console.log(req.body);
-  
-    if (!billId || !action) {
-      return res.status(400).json({ message: "Thiếu thông tin hóa đơn hoặc hành động." });
+
+  if (!billId || !action) {
+    return res.status(400).json({ message: "Thiếu thông tin hóa đơn hoặc hành động." });
+  }
+
+  try {
+    // Lấy thông tin hóa đơn
+    const bill = await Bill.findById(billId);
+    if (!bill) {
+      return res.status(404).json({ message: "Không tìm thấy hóa đơn." });
     }
-  
-    try {
-      // Lấy thông tin hóa đơn
-      const bill = await Bill.findById(billId);
-      if (!bill) {
-        return res.status(404).json({ message: "Không tìm thấy hóa đơn." });
-      }
-  
-      // Xử lý cập nhật trạng thái
-      let updatedStatus = "";
-      if (bill.status === "DangXuLy") {
-        updatedStatus = action === "accept" ? "KiemHang" : "Canceled";
-      } else if (bill.status === "KiemHang") {
-        updatedStatus = action === "accept" ? "HoanTra" : "Canceled";
-      } else {
-        return res.status(400).json({ message: "Trạng thái hiện tại không thể cập nhật." });
-      }
-  
-      // Cập nhật trạng thái hóa đơn
-      bill.status = updatedStatus;
-      await bill.save();
-  
-      res.status(200).json({
-        success: true,
-        message: `Trạng thái hóa đơn đã được cập nhật thành công: ${updatedStatus}`,
-        data: bill,
-      });
-    } catch (error) {
-      console.error("Lỗi khi cập nhật trạng thái hóa đơn:", error);
-      res.status(500).json({ message: "Đã xảy ra lỗi, vui lòng thử lại sau." });
+
+    // Xử lý cập nhật trạng thái
+    let updatedStatus = "";
+    if (bill.status === "DangXuLy") {
+      updatedStatus = action === "accept" ? "KiemHang" : "Canceled";
+    } else if (bill.status === "KiemHang") {
+      updatedStatus = action === "accept" ? "HoanTra" : "Canceled";
+    } else {
+      return res.status(400).json({ message: "Trạng thái hiện tại không thể cập nhật." });
     }
-  };
+
+    // Cập nhật trạng thái hóa đơn
+    bill.status = updatedStatus;
+    await bill.save();
+
+    // Nếu trạng thái là "HoanTra", cộng lại số lượng vào kho
+    if (updatedStatus === "HoanTra") {
+      for (const item of bill.items) {
+        const productId = item.productId || item.product;  // Sử dụng productId để tìm sản phẩm trong kho
+        if (!productId) {
+          console.warn(`Sản phẩm trong hóa đơn không có productId hợp lệ: ${JSON.stringify(item)}`);
+          continue;
+        }
+
+        // Tìm kho của sản phẩm
+        const stock = await Stock.findOne({ productId: productId });
+        if (!stock) {
+          // Nếu không tìm thấy kho cho sản phẩm, bạn có thể tạo mới hoặc thông báo lỗi
+          console.warn(`Không tìm thấy kho cho sản phẩm ID: ${productId}`);
+          continue;  // Hoặc bạn có thể tạo mới kho cho sản phẩm này nếu cần
+        }
+
+        // Cộng lại số lượng vào kho
+        stock.quantity += item.quantity;
+        stock.lastUpdated = new Date();  // Cập nhật thời gian thay đổi kho
+
+        // Lưu thông tin kho sau khi cập nhật
+        await stock.save();
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Trạng thái hóa đơn đã được cập nhật thành công: ${updatedStatus}`,
+      data: bill,
+    });
+  } catch (error) {
+    console.error("Lỗi khi cập nhật trạng thái hóa đơn:", error);
+    res.status(500).json({ message: "Đã xảy ra lỗi, vui lòng thử lại sau." });
+  }
+};

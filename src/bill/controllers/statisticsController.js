@@ -578,6 +578,8 @@ const getCustomerStatistics = async (req, res) => {
           billCount: 1
         }
       },
+      
+  
       { $sort: { date: 1, phoneNumber: 1, category: 1 } },
     ]);
 
